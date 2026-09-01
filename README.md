@@ -6,6 +6,6 @@ Repositório do GRUPO 05 do Projeto Interdisciplinar do 6º semestre DSM 2026/5.
 | Integrante |
 |------------|
 | Vitor Siqueira Simeao |
-| Uriel Monte Paz de Araujo |
+| Uriel Monte Paz de Araújo |
 | Gabriel Aleixo |
 | Dimerson Ferreira |
