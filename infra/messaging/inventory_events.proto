@@ -1,0 +1,61 @@
+syntax = "proto3";
+
+package estoque_inteligente.events.v1;
+
+import "google/protobuf/timestamp.proto";
+
+message EventEnvelope {
+  string message_id = 1;
+  string correlation_id = 2;
+  string producer = 3;
+  uint32 event_version = 4;
+  google.protobuf.Timestamp occurred_at = 5;
+
+  oneof payload {
+    SyncRequested sync_requested = 10;
+    DataIngested data_ingested = 11;
+    ModelRequested model_requested = 12;
+    ModelCompleted model_completed = 13;
+    AlertGenerated alert_generated = 14;
+  }
+}
+
+message SyncRequested {
+  string sync_run_id = 1;
+  string source = 2;
+  google.protobuf.Timestamp changed_since = 3;
+  bool full_sync = 4;
+}
+
+message DataIngested {
+  string sync_run_id = 1;
+  google.protobuf.Timestamp window_started_at = 2;
+  google.protobuf.Timestamp window_ended_at = 3;
+  uint64 records_read = 4;
+  uint64 records_rejected = 5;
+  string dataset_uri = 6;
+}
+
+message ModelRequested {
+  string model_run_id = 1;
+  string task = 2;
+  string dataset_version = 3;
+  repeated uint32 horizons_days = 4;
+}
+
+message ModelCompleted {
+  string model_run_id = 1;
+  string task = 2;
+  string model_version = 3;
+  string status = 4;
+  string metrics_json = 5;
+}
+
+message AlertGenerated {
+  string alert_id = 1;
+  string product_id = 2;
+  string severity = 3;
+  string reason = 4;
+  uint32 coverage_days = 5;
+  google.protobuf.Timestamp calculated_at = 6;
+}

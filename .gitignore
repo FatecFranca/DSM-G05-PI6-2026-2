@@ -1,0 +1,34 @@
+# Dependencies and builds
+node_modules/
+.next/
+dist/
+coverage/
+
+# Environment and credentials
+.env
+.env.*
+!.env.example
+*.pem
+*.key
+
+# Flutter
+.dart_tool/
+.flutter-plugins
+.flutter-plugins-dependencies
+.packages
+build/
+ios/Flutter/.last_build_id
+
+# IDE and OS
+.idea/
+.vscode/
+.DS_Store
+Thumbs.db
+*.log
+
+# Local data and model artifacts
+data/raw/
+data/processed/
+models/
+*.db
+*.sqlite

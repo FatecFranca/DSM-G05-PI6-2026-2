@@ -1,0 +1,65 @@
+export const demandData = [
+  { label: '24 ago', actual: 118, forecast: null, lower: null, upper: null },
+  { label: '25 ago', actual: 126, forecast: null, lower: null, upper: null },
+  { label: '26 ago', actual: 121, forecast: null, lower: null, upper: null },
+  { label: '27 ago', actual: 139, forecast: null, lower: null, upper: null },
+  { label: '28 ago', actual: 151, forecast: null, lower: null, upper: null },
+  { label: '29 ago', actual: 164, forecast: null, lower: null, upper: null },
+  { label: '30 ago', actual: 142, forecast: null, lower: null, upper: null },
+  { label: '31 ago', actual: 133, forecast: 136, lower: 120, upper: 152 },
+  { label: '1 set', actual: null, forecast: 144, lower: 126, upper: 162 },
+  { label: '2 set', actual: null, forecast: 149, lower: 129, upper: 169 },
+  { label: '3 set', actual: null, forecast: 156, lower: 134, upper: 178 },
+  { label: '4 set', actual: null, forecast: 171, lower: 146, upper: 196 },
+  { label: '5 set', actual: null, forecast: 184, lower: 156, upper: 212 },
+  { label: '6 set', actual: null, forecast: 161, lower: 136, upper: 186 },
+];
+
+export const riskProducts = [
+  {
+    sku: 'CAF-500-TD',
+    name: 'Café Torrado 500 g',
+    category: 'Mercearia',
+    stock: 14,
+    forecast: 213,
+    coverage: 2,
+    classification: 'AX',
+    severity: 'Crítico',
+  },
+  {
+    sku: 'LEI-1L-IN',
+    name: 'Leite Integral 1 L',
+    category: 'Laticínios',
+    stock: 42,
+    forecast: 346,
+    coverage: 4,
+    classification: 'AX',
+    severity: 'Crítico',
+  },
+  {
+    sku: 'DET-500-N',
+    name: 'Detergente Neutro 500 ml',
+    category: 'Limpeza',
+    stock: 68,
+    forecast: 111,
+    coverage: 18,
+    classification: 'BY',
+    severity: 'Atenção',
+  },
+  {
+    sku: 'AZE-500-EV',
+    name: 'Azeite Extra Virgem 500 ml',
+    category: 'Mercearia',
+    stock: 31,
+    forecast: 72,
+    coverage: 13,
+    classification: 'AY',
+    severity: 'Atenção',
+  },
+];
+
+export const abcData = [
+  { name: 'Classe A', products: 248, percent: 20, revenue: 80, color: '#0c7767' },
+  { name: 'Classe B', products: 375, percent: 30, revenue: 15, color: '#d69e2e' },
+  { name: 'Classe C', products: 625, percent: 50, revenue: 5, color: '#7c8a96' },
+];

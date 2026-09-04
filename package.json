@@ -1,0 +1,27 @@
+{
+  "name": "dsm-g05-pi6-2026-2",
+  "version": "0.1.0",
+  "private": true,
+  "description": "Gestão inteligente de estoque e previsão de demanda",
+  "workspaces": [
+    "apps/api",
+    "apps/web"
+  ],
+  "scripts": {
+    "dev": "concurrently -n api,web -c blue,green \"npm run dev:api\" \"npm run dev:web\"",
+    "dev:api": "npm run dev --workspace=@estoque-inteligente/api",
+    "dev:web": "npm run dev --workspace=@estoque-inteligente/web",
+    "build": "npm run build --workspaces --if-present",
+    "lint": "npm run lint --workspaces --if-present",
+    "test": "npm run test --workspaces --if-present",
+    "mobile": "cd apps/mobile && flutter run",
+    "desktop": "cd apps/mobile && flutter run -d windows"
+  },
+  "devDependencies": {
+    "concurrently": "9.2.4"
+  },
+  "engines": {
+    "node": ">=22",
+    "npm": ">=10"
+  }
+}
