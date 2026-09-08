@@ -6,6 +6,22 @@ O PostgreSQL será a fonte consolidada consumida pela API e pelos jobs de minera
 
 As cardinalidades e volumes abaixo são **estimativas de projeto**, não estatísticas observadas. Devem ser substituídos após uma extração piloto autorizada.
 
+### Ambiente local implementado
+
+Foi criada uma instância PostgreSQL 18 exclusiva do projeto, limitada ao
+loopback em `127.0.0.1:5433`. Ela não altera nem depende da senha da instância
+do Windows que usa a porta 5432. O banco é `estoque_inteligente` e a conta da
+aplicação é `estoque_app`, sem privilégios administrativos.
+
+- `npm run db:start`: inicia a instância após reiniciar o computador;
+- `npm run db:migrate`: aplica migrações com checksum e lock transacional;
+- `npm run db:seed`: aplica a carga técnica idempotente;
+- `npm run db:setup`: executa as três operações anteriores;
+- `npm run db:stop`: encerra a instância de forma graciosa.
+
+A URL completa fica somente em `apps/api/.env`, ignorado pelo Git. O arquivo
+`.env.example` contém apenas um modelo sem credencial válida.
+
 ## 2. Modelo conceitual
 
 ```mermaid

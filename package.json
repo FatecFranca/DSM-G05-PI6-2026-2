@@ -14,6 +14,11 @@
     "build": "npm run build --workspaces --if-present",
     "lint": "npm run lint --workspaces --if-present",
     "test": "npm run test --workspaces --if-present",
+    "db:start": "powershell -NoProfile -ExecutionPolicy Bypass -File infra/database/start-local.ps1",
+    "db:stop": "powershell -NoProfile -ExecutionPolicy Bypass -File infra/database/stop-local.ps1",
+    "db:migrate": "npm run db:migrate --workspace=@estoque-inteligente/api",
+    "db:seed": "npm run db:seed --workspace=@estoque-inteligente/api",
+    "db:setup": "npm run db:start && npm run db:migrate && npm run db:seed",
     "mobile": "cd apps/mobile && flutter run",
     "desktop": "cd apps/mobile && flutter run -d windows"
   },

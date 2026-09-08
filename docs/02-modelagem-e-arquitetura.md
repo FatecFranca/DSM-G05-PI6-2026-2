@@ -53,7 +53,7 @@ flowchart TB
     end
 
     subgraph services[Serviços]
-        api[API REST\nNode.js + Fastify]
+        api[API REST\nNode.js + Fastify + TypeScript]
         integration[Worker de integração\nPython em Cloud Run Job]
         ml[Worker de dados e ML\nPython em Cloud Run Job]
         broker{{Pub/Sub\nmensagens Protobuf}}
@@ -94,8 +94,8 @@ flowchart TB
 
 | Componente | Responsabilidade | Decisão inicial |
 | --- | --- | --- |
-| Web | dashboard, filtros, visualizações e administração | Next.js 16 com App Router, JavaScript, Radix Themes e Recharts |
-| API | autenticação, regras, contratos e acesso aos resultados | Node.js 24 LTS/compatível e Fastify 5; OpenAPI em `/docs` |
+| Web | dashboard, filtros, visualizações e administração | Next.js 16 com App Router, JavaScript, shadcn/ui e Recharts |
+| API | autenticação, regras, contratos e acesso aos resultados | Node.js, TypeScript e Fastify 5; OpenAPI em `/docs` |
 | Mobile | consultas e alertas prioritários | Flutter 3.41+ para Android e iOS |
 | Desktop | jornadas principais em telas grandes | Flutter para Windows, com layout adaptativo |
 | Pipeline | ingestão, qualidade, atributos, treino e inferência | Python, bibliotecas de dados e execução em lote |
@@ -166,13 +166,15 @@ Em caso de falha, o cursor só avança após a persistência bem-sucedida. Uma n
 | Método e rota | Uso | Situação na sprint 1 |
 | --- | --- | --- |
 | `GET /health` | saúde da aplicação | implementado |
-| `GET /api/v1/dashboard/summary` | KPIs e resumo do painel | implementado com demonstração |
-| `GET /api/v1/products` | lista filtrável de produtos | implementado com demonstração |
-| `GET /api/v1/forecasts` | série prevista e limites | implementado com demonstração |
-| `GET /api/v1/sync-runs` | histórico de sincronizações | implementado com demonstração |
+| `GET /api/v1/dashboard/summary` | KPIs e resumo do painel | implementado com PostgreSQL |
+| `GET /api/v1/products` | lista filtrável de produtos | implementado com PostgreSQL |
+| `GET /api/v1/forecasts` | série prevista e limites | implementado com PostgreSQL |
+| `GET /api/v1/sync-runs` | histórico de sincronizações | implementado com PostgreSQL |
 | `POST /api/v1/integrations/bling/sync` | solicitar sincronização manual | contrato planejado; exige autorização |
 
-Os contratos navegáveis ficam em `/docs`. Os dados demonstrativos serão substituídos por repositórios PostgreSQL sem alterar as rotas públicas.
+Os contratos navegáveis ficam em `/docs`. As rotas usam um repositório
+PostgreSQL injetado nos serviços de aplicação; os testes usam uma implementação
+em memória do mesmo contrato.
 
 ## 6. Decisões de projeto
 

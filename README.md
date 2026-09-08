@@ -2,7 +2,7 @@
 
 Projeto interdisciplinar do Grupo 05 de DSM para gestão inteligente de estoque, classificação de produtos e previsão de demanda a partir de dados históricos do Bling.
 
-> **Situação da 1ª sprint:** estrutura inicial concluída. A aplicação usa dados demonstrativos; nenhuma credencial ou dado real do Bling está versionado.
+> **Situação atual:** estrutura inicial concluída e fluxo local conectado ao PostgreSQL. A carga atual é um seed técnico; nenhuma credencial ou dado real do Bling está versionado.
 
 ## Entregas da 1ª sprint
 
@@ -13,7 +13,7 @@ Projeto interdisciplinar do Grupo 05 de DSM para gestão inteligente de estoque,
 | Casos de uso e arquitetura | [`docs/02-modelagem-e-arquitetura.md`](docs/02-modelagem-e-arquitetura.md) |
 | Repositório do grupo | Este repositório GitHub, com histórico compartilhado |
 | Back-end e API configurada | [`apps/api`](apps/api) — Node.js, Fastify, OpenAPI e testes |
-| Protótipo do front-end | [`apps/web`](apps/web) — Next.js, Radix Themes e Recharts |
+| Protótipo do front-end | [`apps/web`](apps/web) — Next.js, JavaScript, shadcn/ui e Recharts |
 | Banco conceitual e lógico | [`docs/03-banco-de-dados.md`](docs/03-banco-de-dados.md) e [`infra/database/schema.sql`](infra/database/schema.sql) |
 | Serviços de nuvem | [`docs/04-computacao-em-nuvem.md`](docs/04-computacao-em-nuvem.md) |
 | Base e técnicas de mineração | [`docs/05-mineracao-de-dados.md`](docs/05-mineracao-de-dados.md) |
@@ -39,12 +39,18 @@ Os clientes estão separados da API para que Web, Mobile e Desktop compartilhem 
 
 ## Executar localmente
 
-Pré-requisitos: Node.js 22 ou superior, npm 10 ou superior e Flutter 3.41 ou superior.
+Pré-requisitos: Node.js 22 ou superior, npm 10 ou superior, PostgreSQL 18 e Flutter 3.41 ou superior.
 
 ```bash
 npm install
+npm run db:setup
 npm run dev
 ```
+
+A instância local deste computador usa `127.0.0.1:5433`, banco
+`estoque_inteligente` e usuário `estoque_app`. A senha fica apenas em
+`apps/api/.env`, ignorado pelo Git. Os comandos `npm run db:start` e
+`npm run db:stop` controlam a instância isolada do projeto.
 
 - Web: `http://localhost:3000`
 - API: `http://localhost:3333`

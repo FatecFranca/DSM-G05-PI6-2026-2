@@ -4,14 +4,14 @@ import { getConfig } from './config.js';
 const config = getConfig();
 const app = await buildApp();
 
-const shutdown = async (signal) => {
+async function shutdown(signal: string) {
   app.log.info({ signal }, 'Encerrando API');
   await app.close();
   process.exit(0);
-};
+}
 
-process.on('SIGINT', () => shutdown('SIGINT'));
-process.on('SIGTERM', () => shutdown('SIGTERM'));
+process.on('SIGINT', () => void shutdown('SIGINT'));
+process.on('SIGTERM', () => void shutdown('SIGTERM'));
 
 try {
   await app.listen({ host: config.host, port: config.port });

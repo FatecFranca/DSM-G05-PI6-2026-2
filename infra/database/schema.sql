@@ -213,3 +213,8 @@ CREATE INDEX idx_sync_runs_created_at ON sync_runs (created_at DESC);
 CREATE INDEX idx_outbox_unpublished ON outbox_events (occurred_at)
   WHERE published_at IS NULL;
 CREATE INDEX idx_processed_messages_time ON processed_messages (processed_at DESC);
+CREATE INDEX idx_products_supplier_id ON products (supplier_id);
+CREATE INDEX idx_inventory_levels_warehouse_id ON inventory_levels (warehouse_id);
+CREATE INDEX idx_stock_movements_warehouse_id ON stock_movements (warehouse_id);
+CREATE INDEX idx_demand_forecasts_model_run_id ON demand_forecasts (model_run_id);
+CREATE INDEX idx_product_analyses_model_run_id ON product_analyses (model_run_id);
