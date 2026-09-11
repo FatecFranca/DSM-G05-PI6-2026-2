@@ -4,6 +4,7 @@ import { after, before, describe, it } from 'node:test';
 import type { FastifyInstance } from 'fastify';
 
 import { buildApp } from '../src/app.js';
+import { hashToken } from '../src/infrastructure/security/password-hasher.js';
 import type { InventoryRepository } from '../src/domain/inventory-repository.js';
 import type {
   DashboardSummary,
@@ -88,6 +89,17 @@ describe('Estoque Inteligente API', () => {
     app = await buildApp({
       logger: false,
       repository: new FakeInventoryRepository(),
+      authRepository: {
+        async findSession(hash) { return hash === hashToken('a'.repeat(43)) ? { id: 'test', name: 'Teste', email: 'test@example.com', role: 'viewer' } : null; },
+        async createUser() { throw new Error('Não utilizado'); },
+        async findByEmail() { throw new Error('Não utilizado'); },
+        async createSession() { throw new Error('Não utilizado'); },
+        async revokeSession() { throw new Error('Não utilizado'); },
+        async createReset() { throw new Error('Não utilizado'); },
+        async resetPassword() { throw new Error('Não utilizado'); },
+        async changePassword() { throw new Error('Não utilizado'); },
+        async consumeLimit() { throw new Error('Não utilizado'); },
+      },
       env: {
         NODE_ENV: 'test',
         DATABASE_URL: 'postgresql://test:test@localhost:5432/test',
@@ -107,6 +119,7 @@ describe('Estoque Inteligente API', () => {
     const response = await app.inject({
       method: 'GET',
       url: '/api/v1/dashboard/summary',
+      headers: { cookie: `estoque_session=${'a'.repeat(43)}` },
     });
     assert.equal(response.statusCode, 200);
     assert.equal(response.json().meta.demo, false);
@@ -117,6 +130,7 @@ describe('Estoque Inteligente API', () => {
     const response = await app.inject({
       method: 'GET',
       url: '/api/v1/products?search=caf%C3%A9&risk=critical',
+      headers: { cookie: `estoque_session=${'a'.repeat(43)}` },
     });
     assert.equal(response.statusCode, 200);
     assert.equal(response.json().data[0].sku, 'CAF-500-TD');
@@ -126,6 +140,7 @@ describe('Estoque Inteligente API', () => {
     const response = await app.inject({
       method: 'GET',
       url: '/api/v1/forecasts?horizon=14',
+      headers: { cookie: `estoque_session=${'a'.repeat(43)}` },
     });
     assert.equal(response.statusCode, 400);
   });

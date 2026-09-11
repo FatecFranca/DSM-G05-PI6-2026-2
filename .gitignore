@@ -32,3 +32,4 @@ data/processed/
 models/
 *.db
 *.sqlite
+.local/

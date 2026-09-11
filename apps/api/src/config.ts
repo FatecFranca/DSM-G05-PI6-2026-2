@@ -10,6 +10,11 @@ const environmentSchema = z.object({
   CORS_ORIGIN: z.string().default('http://localhost:3000'),
   DATABASE_URL: z.string().url(),
   DB_POOL_MAX: z.coerce.number().int().min(1).max(50).default(10),
+  WEB_URL: z.string().url().default('http://localhost:3000'),
+  REGISTRATION_ENABLED: z.enum(['true', 'false']).optional(),
+  SMTP_URL: z.string().url().refine((value) => ['smtp:', 'smtps:'].includes(new URL(value).protocol), 'Use smtp:// ou smtps://').optional(),
+  MAIL_FROM: z.string().email().default('noreply@estoque.local'),
+  MAIL_MODE: z.enum(['file', 'smtp']).default('file'),
 });
 
 export type AppConfig = {
@@ -20,10 +25,21 @@ export type AppConfig = {
   corsOrigins: string[];
   databaseUrl: string;
   databasePoolMax: number;
+  webUrl: string;
+  registrationEnabled: boolean;
+  smtpUrl: string | undefined;
+  mailFrom: string;
+  mailMode: 'file' | 'smtp';
 };
 
 export function getConfig(env: NodeJS.ProcessEnv = process.env): AppConfig {
   const parsed = environmentSchema.parse(env);
+  if (parsed.MAIL_MODE === 'smtp' && !parsed.SMTP_URL) {
+    throw new Error('SMTP_URL é obrigatória quando MAIL_MODE=smtp.');
+  }
+  if (parsed.NODE_ENV === 'production' && (
+    !parsed.WEB_URL.startsWith('https://') || parsed.MAIL_MODE !== 'smtp'
+  )) { throw new Error('Produção exige WEB_URL HTTPS e MAIL_MODE=smtp.'); }
 
   return {
     nodeEnv: parsed.NODE_ENV,
@@ -33,5 +49,11 @@ export function getConfig(env: NodeJS.ProcessEnv = process.env): AppConfig {
     corsOrigins: parsed.CORS_ORIGIN.split(',').map((origin) => origin.trim()),
     databaseUrl: parsed.DATABASE_URL,
     databasePoolMax: parsed.DB_POOL_MAX,
+    webUrl: new URL(parsed.WEB_URL).origin,
+    registrationEnabled: parsed.REGISTRATION_ENABLED === 'true'
+      || (parsed.REGISTRATION_ENABLED === undefined && parsed.NODE_ENV !== 'production'),
+    smtpUrl: parsed.SMTP_URL,
+    mailFrom: parsed.MAIL_FROM,
+    mailMode: parsed.MAIL_MODE,
   };
 }

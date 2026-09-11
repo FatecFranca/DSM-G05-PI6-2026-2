@@ -2,9 +2,10 @@
 
 Projeto interdisciplinar do Grupo 05 de DSM para gestão inteligente de estoque, classificação de produtos e previsão de demanda a partir de dados históricos do Bling.
 
-> **Situação atual:** Web e Flutter consomem a API conectada ao PostgreSQL. A
-> carga atual é um seed técnico; nenhuma credencial ou dado real do Bling está
-> versionado.
+> **Situação atual:** Web com cadastro, login, recuperação e troca de senha,
+> conectado à API e ao PostgreSQL. A API exige sessão para dados de estoque;
+> o Flutter ainda precisa integrar autenticação. A carga atual é um seed técnico;
+> nenhuma credencial ou dado real do Bling está versionado.
 
 ## Entregas da 1ª sprint
 
@@ -57,6 +58,9 @@ A instância local deste computador usa `127.0.0.1:5433`, banco
 - Web: `http://localhost:3000`
 - API: `http://localhost:3333`
 - Documentação OpenAPI: `http://localhost:3333/docs`
+
+Crie sua conta em `http://localhost:3000/cadastro`. Detalhes de segurança, testes
+e recuperação de senha local: [Autenticação](docs/08-autenticacao.md).
 
 Também é possível iniciar os projetos separadamente:
 
