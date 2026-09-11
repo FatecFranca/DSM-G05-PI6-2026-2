@@ -18,7 +18,8 @@ if ($LASTEXITCODE -eq 0) {
   exit 0
 }
 
-& $pgCtl -D $dataDirectory -l $logPath -o '"-p 5433" "-h 127.0.0.1"' -w start
+$serverOptions = '-p 5433 -h 127.0.0.1'
+& $pgCtl -D $dataDirectory -l $logPath -o $serverOptions -w start
 if ($LASTEXITCODE -ne 0) {
   throw 'Não foi possível iniciar o PostgreSQL do projeto.'
 }

@@ -2,7 +2,9 @@
 
 Projeto interdisciplinar do Grupo 05 de DSM para gestão inteligente de estoque, classificação de produtos e previsão de demanda a partir de dados históricos do Bling.
 
-> **Situação atual:** estrutura inicial concluída e fluxo local conectado ao PostgreSQL. A carga atual é um seed técnico; nenhuma credencial ou dado real do Bling está versionado.
+> **Situação atual:** Web e Flutter consomem a API conectada ao PostgreSQL. A
+> carga atual é um seed técnico; nenhuma credencial ou dado real do Bling está
+> versionado.
 
 ## Entregas da 1ª sprint
 
@@ -17,7 +19,7 @@ Projeto interdisciplinar do Grupo 05 de DSM para gestão inteligente de estoque,
 | Banco conceitual e lógico | [`docs/03-banco-de-dados.md`](docs/03-banco-de-dados.md) e [`infra/database/schema.sql`](infra/database/schema.sql) |
 | Serviços de nuvem | [`docs/04-computacao-em-nuvem.md`](docs/04-computacao-em-nuvem.md) |
 | Base e técnicas de mineração | [`docs/05-mineracao-de-dados.md`](docs/05-mineracao-de-dados.md) |
-| Aplicativos móvel e desktop | [`apps/mobile`](apps/mobile) — Flutter para Android, iOS e Windows |
+| Aplicativos móvel e desktop | [`apps/mobile`](apps/mobile) — Flutter adaptativo conectado à API, com dashboard, produtos e alertas |
 | Decisão sobre desktop | [`docs/decisions/ADR-001-plataforma-desktop.md`](docs/decisions/ADR-001-plataforma-desktop.md) |
 | TDD e testes | [`docs/06-estrategia-de-testes.md`](docs/06-estrategia-de-testes.md) |
 | Versionamento e colaboração | [`docs/07-versionamento-e-colaboracao.md`](docs/07-versionamento-e-colaboracao.md) |

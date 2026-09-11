@@ -170,9 +170,14 @@ a {
   height: 39px;
   place-items: center;
   border-radius: 12px;
-  color: #fff;
-  background: linear-gradient(145deg, #138d7a, #086356);
+  overflow: hidden;
+  background: var(--teal-soft);
   box-shadow: 0 7px 16px rgba(12, 119, 103, 0.25);
+}
+
+.brand-symbol img,
+.mobile-brand img {
+  object-fit: contain;
 }
 
 .brand > span:last-child {

@@ -1,4 +1,5 @@
 "use client";
+import Image from "next/image";
 import {
   AlertTriangle,
   ArrowDownRight,
@@ -32,6 +33,7 @@ import {
   YAxis
 } from "recharts";
 import useSWR from "swr";
+import appIcon from "@/app/icon.png";
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 import { Avatar, AvatarFallback } from "@/components/ui/avatar";
 import { Badge } from "@/components/ui/badge";
@@ -241,7 +243,7 @@ function Sidebar({ lastSyncAt }) {
   const syncLabel = lastSyncAt ? new Intl.DateTimeFormat("pt-BR", { dateStyle: "short", timeStyle: "short" }).format(new Date(lastSyncAt)) : "aguardando primeira carga";
   return <aside className="sidebar">
       <a href="#conteudo" className="brand">
-        <span className="brand-symbol"><Boxes size={22} /></span>
+        <span className="brand-symbol"><Image src={appIcon} alt="" width={31} height={31} priority /></span>
         <span><strong>Estoque</strong><small>Inteligente</small></span>
       </a>
       <nav aria-label="Navegação principal">
@@ -293,7 +295,7 @@ function Dashboard() {
       <Sidebar lastSyncAt={summary?.meta.lastSyncAt ?? null} />
       <main className="main-content" id="conteudo">
         <header className="topbar">
-          <div className="mobile-brand"><Menu size={21} /><Boxes size={20} /><strong>Estoque Inteligente</strong></div>
+          <div className="mobile-brand"><Menu size={21} /><Image src={appIcon} alt="" width={25} height={25} priority /><strong>Estoque Inteligente</strong></div>
           <div className="topbar-actions"><Badge variant="secondary">PostgreSQL</Badge><Bell size={19} /></div>
         </header>
         <div className="content-wrap">

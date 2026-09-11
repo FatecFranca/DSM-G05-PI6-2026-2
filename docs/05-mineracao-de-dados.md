@@ -23,6 +23,32 @@ Dados autorizados do sistema Bling em produção, obtidos por integração ofici
 
 Dados de clientes não são necessários para os objetivos atuais e devem ser excluídos ou anonimizados.
 
+### Base externa para desenvolvimento e validação
+
+Enquanto o histórico autorizado do Bling não estiver disponível, o projeto usará a
+base [Retail Sales Data](https://www.kaggle.com/datasets/berkayalan/retail-sales-data),
+publicada no Kaggle sob **CC0 1.0 (domínio público)**. Essa licença permite copiar,
+modificar e utilizar os dados inclusive para fins comerciais, sem restringir o
+software ou o modelo a uso acadêmico.
+
+A versão obtida em 08/09/2026 contém:
+
+- `sales_daily.csv`: 19.454.838 observações e os campos produto, loja, data,
+  vendas, receita, estoque, preço e promoções;
+- `product_hierarchy.csv`: dimensões físicas, cluster e cinco níveis de
+  hierarquia dos produtos;
+- `store_cities.csv`: tipo, tamanho e cidade das lojas;
+- período informado pela fonte: 2017 a 2019, referente a uma varejista turca;
+- SHA-256 de `sales_daily.csv`:
+  `049021871734B9CF2382FEBD09D0397B667B65E367DAB8CCD2874E8165A5384E`.
+
+Ela será usada para desenvolver ingestão, perfil, atributos, agrupamento,
+classificação e previsão. Apesar da licença permissiva, um modelo treinado apenas
+nessa base não será tratado como adequado para decisões de outra empresa: antes
+de produção, deverá ser recalibrado e reavaliado com o histórico autorizado do
+Bling. A base M5 não foi escolhida como fonte oficial porque sua licença é
+condicionada às regras da competição.
+
 ### Estratégia de integração com o Bling
 
 A documentação vigente do Bling define uma API v3 REST com autorização OAuth 2.0 pelo fluxo Authorization Code. A integração deve executar troca e renovação de tokens somente no servidor, armazenar o segredo fora do código e adotar o formato JWT recomendado pelo provedor. A primeira versão fará reconciliação incremental diária; webhooks de produto, pedido e estoque podem reduzir a latência em uma etapa posterior, sem substituir a reconciliação diária contra perdas de eventos.
