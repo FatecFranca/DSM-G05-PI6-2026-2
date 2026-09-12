@@ -8,9 +8,18 @@ import '../products/products_screen.dart';
 import '../widgets/app_brand.dart';
 
 class HomeShell extends StatefulWidget {
-  const HomeShell({super.key, required this.repository});
+  const HomeShell({
+    super.key,
+    required this.repository,
+    this.accountPage,
+    this.userName = 'Minha conta',
+    this.userRole = 'viewer',
+  });
 
   final InventoryRepository repository;
+  final Widget? accountPage;
+  final String userName;
+  final String userRole;
 
   @override
   State<HomeShell> createState() => _HomeShellState();
@@ -19,7 +28,7 @@ class HomeShell extends StatefulWidget {
 class _HomeShellState extends State<HomeShell> {
   var _currentIndex = 0;
 
-  static const _titles = ['Visão geral', 'Produtos', 'Alertas'];
+  static const _titles = ['Visão geral', 'Produtos', 'Alertas', 'Minha conta'];
 
   @override
   Widget build(BuildContext context) {
@@ -29,6 +38,7 @@ class _HomeShellState extends State<HomeShell> {
       DashboardScreen(repository: widget.repository),
       ProductsScreen(repository: widget.repository),
       AlertsScreen(repository: widget.repository),
+      widget.accountPage ?? const SizedBox.shrink(),
     ];
     final content = IndexedStack(index: _currentIndex, children: pages);
 
@@ -40,6 +50,8 @@ class _HomeShellState extends State<HomeShell> {
               extended: width >= 1120,
               selectedIndex: _currentIndex,
               onSelected: (index) => setState(() => _currentIndex = index),
+              userName: widget.userName,
+              userRole: widget.userRole,
             ),
             Expanded(
               child: Column(
@@ -96,6 +108,11 @@ class _HomeShellState extends State<HomeShell> {
             selectedIcon: Icon(Icons.warning_rounded),
             label: 'Alertas',
           ),
+          NavigationDestination(
+            icon: Icon(Icons.person_outline),
+            selectedIcon: Icon(Icons.person),
+            label: 'Conta',
+          ),
         ],
       ),
     );
@@ -107,11 +124,15 @@ class _DesktopNavigation extends StatelessWidget {
     required this.extended,
     required this.selectedIndex,
     required this.onSelected,
+    required this.userName,
+    required this.userRole,
   });
 
   final bool extended;
   final int selectedIndex;
   final ValueChanged<int> onSelected;
+  final String userName;
+  final String userRole;
 
   @override
   Widget build(BuildContext context) {
@@ -152,22 +173,34 @@ class _DesktopNavigation extends StatelessWidget {
                     selectedIcon: Icon(Icons.warning_rounded),
                     label: Text('Alertas'),
                   ),
+                  NavigationRailDestination(
+                    icon: Icon(Icons.person_outline),
+                    selectedIcon: Icon(Icons.person),
+                    label: Text('Conta'),
+                  ),
                 ],
               ),
             ),
             Padding(
               padding: const EdgeInsets.all(16),
               child: extended
-                  ? const ListTile(
+                  ? ListTile(
                       contentPadding: EdgeInsets.zero,
-                      leading: CircleAvatar(child: Text('G5')),
-                      title: Text('Grupo 05', style: TextStyle(fontSize: 13)),
+                      leading: const CircleAvatar(
+                        child: Icon(Icons.person_outline),
+                      ),
+                      title: Text(
+                        userName,
+                        maxLines: 1,
+                        overflow: TextOverflow.ellipsis,
+                        style: const TextStyle(fontSize: 13),
+                      ),
                       subtitle: Text(
-                        'Administrador',
-                        style: TextStyle(fontSize: 11),
+                        userRole == 'admin' ? 'Administrador' : 'Consulta',
+                        style: const TextStyle(fontSize: 11),
                       ),
                     )
-                  : const CircleAvatar(child: Text('G5')),
+                  : const CircleAvatar(child: Icon(Icons.person_outline)),
             ),
           ],
         ),

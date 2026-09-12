@@ -4,7 +4,8 @@ Projeto interdisciplinar do Grupo 05 de DSM para gestão inteligente de estoque,
 
 > **Situação atual:** Web com cadastro, login, recuperação e troca de senha,
 > conectado à API e ao PostgreSQL. A API exige sessão para dados de estoque;
-> o Flutter ainda precisa integrar autenticação. A carga atual é um seed técnico;
+> o Flutter nativo também possui autenticação e sessão em armazenamento seguro.
+> A carga atual é um seed técnico;
 > nenhuma credencial ou dado real do Bling está versionado.
 
 ## Entregas da 1ª sprint

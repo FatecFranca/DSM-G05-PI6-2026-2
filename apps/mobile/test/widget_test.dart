@@ -1,4 +1,4 @@
-import 'package:estoque_inteligente/app.dart';
+import 'package:estoque_inteligente/presentation/home/home_shell.dart';
 import 'package:estoque_inteligente/domain/inventory_repository.dart';
 import 'package:estoque_inteligente/domain/models.dart';
 import 'package:flutter/material.dart';
@@ -9,7 +9,7 @@ void main() {
     tester,
   ) async {
     await tester.pumpWidget(
-      EstoqueInteligenteApp(repository: FakeInventoryRepository()),
+      MaterialApp(home: HomeShell(repository: FakeInventoryRepository())),
     );
     await tester.pumpAndSettle();
 
@@ -32,7 +32,7 @@ void main() {
     });
 
     await tester.pumpWidget(
-      EstoqueInteligenteApp(repository: FakeInventoryRepository()),
+      MaterialApp(home: HomeShell(repository: FakeInventoryRepository())),
     );
     await tester.pumpAndSettle();
 

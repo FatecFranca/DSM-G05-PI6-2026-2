@@ -125,8 +125,9 @@ transições e desativa o movimento contínuo dos skeletons.
 
 ## Limites desta etapa
 
-- Flutter ainda precisa de telas de autenticação e persistência segura de cookies.
-  As consultas antigas sem sessão recebem 401; não há bypass para mobile/desktop.
+- Flutter nativo agora tem autenticação, armazenamento seguro de sessão e
+  tratamento de 401. Consulte `apps/mobile/README.md` para configurar o aparelho.
+  A recuperação aceita colar o link; App Links/Universal Links ficam pendentes.
 - Ainda não há MFA, verificação de e-mail, convites ou administração de usuários.
   Não abrir cadastro de produção para uma operação com dados reais sem controle
   de admissão dos usuários. `viewer` dá acesso de leitura à operação existente.
