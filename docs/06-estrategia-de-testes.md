@@ -96,3 +96,18 @@ Uma história só está pronta quando:
 | PostgreSQL | restrições no schema | subir banco efêmero e testar migração/índices |
 | Mensageria | contratos Protobuf e padrões definidos | emulador Pub/Sub, idempotência, retry e DLQ |
 | Mineração | critérios e métricas definidos | testes de qualidade, baseline e vazamento temporal |
+
+## 9. Integração contínua no GitHub Actions
+
+O workflow `.github/workflows/ci.yml` (Quality checks) executa em cada **push para qualquer branch**, inclusive `feature/authentication`, e em pull requests destinados à `main`. Um commit local só dispara o Actions depois do `git push`. Também há execução manual por `workflow_dispatch`, disponível quando o workflow estiver na branch padrão.
+
+Dois jobs rodam em paralelo:
+
+- `web-api`: Node.js 24, `npm ci`, lint do web/API, verificação TypeScript da API, testes unitários, testes de autenticação com PostgreSQL 18 real e build do web/API.
+- `flutter`: Flutter 3.41.7, instalação de dependências, `flutter analyze` e todos os testes de controllers, widgets e layouts.
+
+O PostgreSQL é criado no runner com credenciais exclusivas de teste e descartado ao final. A suíte de autenticação cria e remove seu próprio schema temporário. Não é necessário configurar secrets, Gmail, Resend ou o `.env` local no GitHub: a entrega de e-mails é simulada nos testes, não enviada a pessoas reais.
+
+Cada job tem limite de 20 minutos; uma nova execução do mesmo evento/ref cancela a anterior ainda em andamento. Falhas de lint, tipos, testes ou build fazem o job falhar. Consulte os resultados na aba **Actions → Quality checks** do repositório.
+
+Esses checks não incluem testes ponta a ponta do navegador nem confirmação de entrega SMTP. Para impedir merges com falhas, configure separadamente uma regra de proteção da `main` exigindo os checks `web-api` e `flutter`; o workflow por si só não bloqueia merges.

@@ -5,15 +5,17 @@ import { fileURLToPath } from 'node:url';
 import { getConfig } from '../../config.js';
 import { PostgresDatabase } from './postgres-database.js';
 
-const migrationName = '001_initial_schema';
-const schemaPath = fileURLToPath(
-  new URL('../../../../../infra/database/schema.sql', import.meta.url),
-);
+const migrations = [
+  ['001_initial_schema', 'schema.sql'],
+  ['002_authentication', 'migrations/002_authentication.sql'],
+] as const;
 
 const config = getConfig();
 const database = new PostgresDatabase(config.databaseUrl, 1);
 
 try {
+  for (const [migrationName, filename] of migrations) {
+  const schemaPath = fileURLToPath(new URL(`../../../../../infra/database/${filename}`, import.meta.url));
   const sql = await readFile(schemaPath, 'utf8');
   const checksum = createHash('sha256').update(sql).digest('hex');
 
@@ -44,6 +46,7 @@ try {
   });
 
   console.info(applied ? `Migração aplicada: ${migrationName}` : `Migração já aplicada: ${migrationName}`);
+  }
 } finally {
   await database.close();
 }

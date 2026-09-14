@@ -1,5 +1,7 @@
 "use client";
 import Image from "next/image";
+import Link from 'next/link';
+import { AccountMenu } from '@/components/auth/account-menu';
 import {
   AlertTriangle,
   ArrowDownRight,
@@ -48,7 +50,7 @@ import {
   SelectValue
 } from "@/components/ui/select";
 import { Separator } from "@/components/ui/separator";
-import { Skeleton } from "@/components/ui/skeleton";
+import { ChartSkeleton, DashboardSkeleton } from '@/components/loading-states';
 import {
   Table,
   TableBody,
@@ -239,7 +241,7 @@ function RisksTable({
       </div>
     </Card>;
 }
-function Sidebar({ lastSyncAt }) {
+function Sidebar({ lastSyncAt, user }) {
   const syncLabel = lastSyncAt ? new Intl.DateTimeFormat("pt-BR", { dateStyle: "short", timeStyle: "short" }).format(new Date(lastSyncAt)) : "aguardando primeira carga";
   return <aside className="sidebar">
       <a href="#conteudo" className="brand">
@@ -261,18 +263,15 @@ function Sidebar({ lastSyncAt }) {
           <div><strong>PostgreSQL conectado</strong><small>{syncLabel}</small></div>
         </div>
         <Separator />
-        <div className="profile-row">
-          <Avatar><AvatarFallback>G5</AvatarFallback></Avatar>
-          <div className="profile-copy"><strong>Grupo 05</strong><small>Administrador</small></div>
+        <Link href="/conta" className="profile-row">
+          <Avatar><AvatarFallback>{user.name.slice(0, 2).toUpperCase()}</AvatarFallback></Avatar>
+          <div className="profile-copy"><strong>{user.name}</strong><small>{user.role === 'admin' ? 'Administrador' : 'Consulta'}</small></div>
           <ChevronRight size={16} />
-        </div>
+        </Link>
       </div>
     </aside>;
 }
-function DashboardSkeleton() {
-  return <div className="loading-grid">{Array.from({ length: 8 }, (_, index) => <Skeleton key={index} className="h-36 w-full" />)}</div>;
-}
-function Dashboard() {
+function Dashboard({ user }) {
   const [horizon, setHorizon] = useState(7);
   const [query, setQuery] = useState("");
   const summaryRequest = useSWR("dashboard-summary", () => api.getSummary());
@@ -291,12 +290,12 @@ function Dashboard() {
     { label: "Risco de ruptura", value: String(summary.kpis.stockoutRisk), trend: "Prioridade", trendLabel: "reposi\xE7\xE3o necess\xE1ria", icon: AlertTriangle, tone: "red", direction: "down" },
     { label: "N\xEDvel de servi\xE7o", value: `${summary.kpis.serviceLevel.toFixed(1)}%`, trend: "30 dias", trendLabel: "sem ruptura registrada", icon: ShieldCheck, tone: "amber", direction: "up" }
   ] : [];
-  return <div className="app-shell">
-      <Sidebar lastSyncAt={summary?.meta.lastSyncAt ?? null} />
+  return <div className="app-shell motion-enter">
+      <Sidebar lastSyncAt={summary?.meta.lastSyncAt ?? null} user={user} />
       <main className="main-content" id="conteudo">
         <header className="topbar">
           <div className="mobile-brand"><Menu size={21} /><Image src={appIcon} alt="" width={25} height={25} priority /><strong>Estoque Inteligente</strong></div>
-          <div className="topbar-actions"><Badge variant="secondary">PostgreSQL</Badge><Bell size={19} /></div>
+          <div className="topbar-actions"><AccountMenu /><Bell size={19} /></div>
         </header>
         <div className="content-wrap">
           <section className="page-intro">
@@ -314,15 +313,16 @@ function Dashboard() {
       forecastRequest.mutate()
     ])}
     disabled={validating}
+    aria-busy={validating}
   >
-                <RefreshCw size={15} />Atualizar
+                <RefreshCw size={15} className={validating ? 'animate-spin' : undefined} />{validating ? 'Atualizando…' : 'Atualizar'}
               </Button>
             </div>
           </section>
           {error && <Alert variant="destructive"><AlertTriangle /><AlertTitle>API indisponível</AlertTitle><AlertDescription>{error instanceof Error ? error.message : "Falha na consulta."} Confirme se a API está em http://localhost:3333.</AlertDescription></Alert>}
           {loading && !summary ? <DashboardSkeleton /> : summary && <>
-              <section className="metrics-grid">{metrics.map((metric) => <MetricCard key={metric.label} metric={metric} />)}</section>
-              <section className="analytics-grid"><DemandChart data={series} horizon={horizon} /><ClassificationCard data={summary.classifications} /></section>
+              <section className="metrics-grid motion-stagger">{metrics.map((metric) => <MetricCard key={metric.label} metric={metric} />)}</section>
+              <section className="analytics-grid">{forecastRequest.isLoading ? <ChartSkeleton /> : <DemandChart data={series} horizon={horizon} />}<ClassificationCard data={summary.classifications} /></section>
               <section className="insight-strip"><span className="insight-icon"><TrendingUp size={19} /></span><div><strong>INSIGHT DO DIA</strong><p>Priorize os itens críticos pela cobertura calculada com a demanda dos últimos 30 dias.</p></div></section>
               <RisksTable products={summary.riskProducts} query={query} />
             </>}

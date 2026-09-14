@@ -1,5 +1,5 @@
 class DashboardApiClient {
-  constructor(baseUrl = process.env.NEXT_PUBLIC_API_URL ?? "http://localhost:3333") {
+  constructor(baseUrl = "") {
     this.baseUrl = baseUrl;
   }
   baseUrl;
@@ -15,9 +15,15 @@ class DashboardApiClient {
   async get(path, signal) {
     const response = await fetch(`${this.baseUrl}${path}`, {
       headers: { Accept: "application/json" },
+      credentials: 'same-origin',
+      cache: 'no-store',
       signal
     });
     if (!response.ok) {
+      if (response.status === 401 && typeof window !== 'undefined') {
+        window.location.replace('/login');
+        throw new Error('Sua sessão expirou. Entre novamente.');
+      }
       throw new Error(`A API respondeu com status ${response.status}.`);
     }
     return response.json();

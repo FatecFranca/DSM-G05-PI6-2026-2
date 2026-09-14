@@ -18,11 +18,24 @@ class InventoryApiClient {
 
   final Uri baseUri;
   final http.Client _httpClient;
+  String? sessionToken;
+  void Function()? onSessionExpired;
 
   Future<Map<String, dynamic>> getJson(
     String path, {
     Map<String, String?> query = const {},
+  }) async => (await request('GET', path, query: query)).data;
+
+  Future<ApiResponse> postJson(String path, Map<String, dynamic> body) =>
+      request('POST', path, body: body);
+
+  Future<ApiResponse> request(
+    String method,
+    String path, {
+    Map<String, String?> query = const {},
+    Map<String, dynamic>? body,
   }) async {
+    final tokenAtStart = sessionToken;
     final uri = baseUri.replace(
       path: path,
       queryParameters: {
@@ -33,21 +46,32 @@ class InventoryApiClient {
     );
 
     late final http.Response response;
+    final request = http.Request(method, uri)
+      ..followRedirects = false
+      ..headers.addAll({
+        'Accept': 'application/json',
+        'X-Requested-With': 'EstoqueInteligente',
+        if (tokenAtStart != null) 'Cookie': 'estoque_session=$tokenAtStart',
+      });
+    if (body != null) {
+      request.headers['Content-Type'] = 'application/json';
+      request.body = jsonEncode(body);
+    }
     try {
       response = await _httpClient
-          .get(uri, headers: const {'Accept': 'application/json'})
-          .timeout(const Duration(seconds: 12));
+          .send(request)
+          .then(http.Response.fromStream)
+          .timeout(const Duration(seconds: 15));
     } on Exception {
       throw const ApiException(
         'Não foi possível acessar a API. Confirme se o servidor está ativo.',
       );
     }
 
-    if (response.statusCode < 200 || response.statusCode >= 300) {
-      throw ApiException(
-        'A API respondeu com status ${response.statusCode}.',
-        statusCode: response.statusCode,
-      );
+    if (response.statusCode == 401 &&
+        tokenAtStart != null &&
+        sessionToken == tokenAtStart) {
+      onSessionExpired?.call();
     }
 
     try {
@@ -55,11 +79,25 @@ class InventoryApiClient {
       if (decoded is! Map<String, dynamic>) {
         throw const FormatException('Resposta não é um objeto JSON.');
       }
-      return decoded;
+      if (response.statusCode < 200 || response.statusCode >= 300) {
+        throw ApiException(
+          decoded['message'] is String
+              ? decoded['message'] as String
+              : 'Não foi possível concluir a solicitação.',
+          statusCode: response.statusCode,
+        );
+      }
+      return ApiResponse(decoded, response.headers);
     } on FormatException {
       throw const ApiException('A API retornou uma resposta inválida.');
     }
   }
 
   void close() => _httpClient.close();
+}
+
+class ApiResponse {
+  const ApiResponse(this.data, this.headers);
+  final Map<String, dynamic> data;
+  final Map<String, String> headers;
 }

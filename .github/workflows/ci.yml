@@ -1,0 +1,64 @@
+name: Quality checks
+on:
+  push:
+    branches: ['**']
+  pull_request:
+    branches: [main]
+  workflow_dispatch:
+permissions:
+  contents: read
+concurrency:
+  group: ${{ github.workflow }}-${{ github.event_name }}-${{ github.ref }}
+  cancel-in-progress: true
+jobs:
+  flutter:
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@v4
+      - uses: subosito/flutter-action@v2
+        with:
+          flutter-version: '3.41.7'
+          channel: stable
+          cache: true
+      - run: flutter pub get
+        working-directory: apps/mobile
+      - run: flutter analyze
+        working-directory: apps/mobile
+      - run: flutter test
+        working-directory: apps/mobile
+  web-api:
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    services:
+      postgres:
+        image: postgres:18
+        env:
+          POSTGRES_DB: estoque_test
+          POSTGRES_USER: estoque_test
+          POSTGRES_PASSWORD: ci_ephemeral_password
+        ports: ['5432:5432']
+        options: >-
+          --health-cmd "pg_isready -U estoque_test -d estoque_test"
+          --health-interval 5s
+          --health-timeout 5s
+          --health-retries 10
+    env:
+      DATABASE_URL: postgresql://estoque_test:ci_ephemeral_password@127.0.0.1:5432/estoque_test
+      # Banco descartável do runner; nunca usa credenciais locais ou de produção.
+      MAIL_MODE: file
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '24'
+          cache: npm
+      - run: npm ci
+      - run: npm run lint
+      - name: Verificar tipos da API
+        run: npm run typecheck --workspace @estoque-inteligente/api
+      - name: Testes unitários da API
+        run: npm test
+      - name: Autenticação com PostgreSQL real
+        run: npm run test:integration --workspace @estoque-inteligente/api
+      - run: npm run build
