@@ -16,7 +16,7 @@ O identificador UUID do produto é interno e permanente. IDs do Bling ou de outr
 - auditoria e eventos `product.created` / `product.updated` na outbox;
 - origem registrada como `manual`, `csv`, `legacy` ou, futuramente, `bling`.
 
-Saldo não pertence ao cadastro do produto. Quantidade disponível, reservas e movimentações permanecem nas tabelas de estoque e serão implementadas em uma etapa própria.
+Saldo não pertence ao cadastro do produto. Quantidade disponível, reservas e movimentações permanecem nas tabelas de estoque e estão documentadas em [Movimentações de estoque](10-movimentacoes-estoque.md).
 
 ## CSV
 

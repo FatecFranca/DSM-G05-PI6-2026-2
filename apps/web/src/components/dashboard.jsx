@@ -64,6 +64,7 @@ const api = new DashboardApiClient();
 const navigation = [
   { label: "Vis\xE3o geral", icon: CircleGauge, href: "#conteudo", active: true },
   { label: "Produtos", icon: PackageSearch, href: "/produtos" },
+  { label: "Estoque", icon: Warehouse, href: "/estoque" },
   { label: "Previs\xF5es", icon: ChartNoAxesCombined, href: "#previsoes" },
   { label: "Classifica\xE7\xE3o", icon: Layers3, href: "#classificacao" },
   { label: "Integra\xE7\xF5es", icon: CloudCog, href: "#integracoes" }

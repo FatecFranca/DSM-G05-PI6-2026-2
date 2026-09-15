@@ -16,6 +16,10 @@ import { ProductError } from './domain/product.js';
 import { PostgresProductRepository } from './infrastructure/repositories/postgres-product-repository.js';
 import { CsvProductSource } from './infrastructure/sources/csv-product-source.js';
 import { registerProductRoutes } from './presentation/product-routes.js';
+import { StockService } from './application/stock-service.js';
+import { StockError } from './domain/stock.js';
+import { PostgresStockRepository } from './infrastructure/repositories/postgres-stock-repository.js';
+import { registerStockRoutes } from './presentation/stock-routes.js';
 
 import { InventoryService } from './application/inventory-service.js';
 import { getConfig } from './config.js';
@@ -63,7 +67,7 @@ export async function buildApp(options: BuildAppOptions = {}) {
     if (error instanceof ZodError) {
       return reply.code(400).send({ message: 'Confira os campos informados.', fields: error.flatten().fieldErrors });
     }
-    if (error instanceof AuthError || error instanceof ProductError) {
+    if (error instanceof AuthError || error instanceof ProductError || error instanceof StockError) {
       if (error.statusCode === 429) { reply.header('Retry-After', '900'); }
       return reply.code(error.statusCode).send({ message: error.message });
     }
@@ -84,6 +88,7 @@ export async function buildApp(options: BuildAppOptions = {}) {
         { name: 'System', description: 'Saúde da aplicação' },
         { name: 'Dashboard', description: 'Indicadores consolidados' },
         { name: 'Products', description: 'Catálogo e situação dos produtos' },
+        { name: 'Inventory', description: 'Saldos e movimentações de estoque' },
         { name: 'Forecasts', description: 'Previsões de demanda' },
         { name: 'Integrations', description: 'Sincronizações externas' },
       ],
@@ -93,6 +98,7 @@ export async function buildApp(options: BuildAppOptions = {}) {
   await app.register(swaggerUi, { routePrefix: '/docs' });
   await registerRoutes(app, service);
   await registerProductRoutes(app, new ProductService(new PostgresProductRepository(database), new CsvProductSource()));
+  await registerStockRoutes(app, new StockService(new PostgresStockRepository(database)));
 
   app.setNotFoundHandler((request, reply) => {
     reply.code(404).send({

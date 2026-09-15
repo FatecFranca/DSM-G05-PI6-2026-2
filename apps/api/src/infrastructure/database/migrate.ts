@@ -9,6 +9,8 @@ const migrations = [
   ['001_initial_schema', 'schema.sql'],
   ['002_authentication', 'migrations/002_authentication.sql'],
   ['003_product_catalog', 'migrations/003_product_catalog.sql'],
+  ['004_stock_movements', 'migrations/004_stock_movements.sql'],
+  ['005_warehouse_catalog', 'migrations/005_warehouse_catalog.sql'],
 ] as const;
 
 const config = getConfig();

@@ -2,7 +2,7 @@
 
 import Link from 'next/link';
 import { useEffect, useRef, useState } from 'react';
-import { ArrowLeft, Download, LoaderCircle, PackageSearch, Plus, Search } from 'lucide-react';
+import { ArrowLeft, Boxes, Download, LoaderCircle, PackageSearch, Plus, Search } from 'lucide-react';
 import { AccountMenu } from '@/components/auth/account-menu';
 import { Button } from '@/components/ui/button';
 import { Card } from '@/components/ui/card';
@@ -134,7 +134,7 @@ export function ProductCatalog({ user }) {
     <header className="flex flex-wrap items-center justify-between gap-4">
       <div><div className="mb-2 flex items-center gap-2 text-sm text-muted-foreground"><PackageSearch className="size-4" />CATÁLOGO</div>
         <h1 className="text-3xl font-semibold tracking-tight">Produtos</h1><p className="mt-2 text-muted-foreground">Organize seu catálogo, mesmo sem um ERP conectado.</p></div>
-      {admin && <Button onClick={() => edit({})}><Plus className="size-4" />Novo produto</Button>}
+      <div className="flex gap-2"><Button variant="outline" asChild><Link href="/estoque"><Boxes className="size-4" />Estoque</Link></Button>{admin && <Button onClick={() => edit({})}><Plus className="size-4" />Novo produto</Button>}</div>
     </header>
     {!admin && <Alert><AlertDescription>Você tem acesso de consulta. Um administrador pode cadastrar, importar e editar produtos.</AlertDescription></Alert>}
     {notice && <p role="status" className="text-sm text-primary">{notice}</p>}

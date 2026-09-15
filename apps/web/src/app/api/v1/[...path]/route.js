@@ -13,7 +13,9 @@ async function proxy(request, context) {
   const catalogAllowed = (endpoint === 'catalog/products' && ['GET', 'POST'].includes(request.method))
     || (endpoint === 'catalog/import' && request.method === 'POST')
     || (/^catalog\/products\/[0-9a-f-]{36}$/.test(endpoint) && request.method === 'PUT');
-  if (allowed.get(endpoint) !== request.method && !catalogAllowed) {
+  const inventoryAllowed = (['inventory/options', 'inventory/levels', 'inventory/movements'].includes(endpoint) && request.method === 'GET')
+    || (['inventory/movements', 'inventory/transfers', 'inventory/warehouses'].includes(endpoint) && request.method === 'POST');
+  if (allowed.get(endpoint) !== request.method && !catalogAllowed && !inventoryAllowed) {
     return Response.json({ message: 'Rota não encontrada.' }, { status: 404 });
   }
   const incomingUrl = new URL(request.url);

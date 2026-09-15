@@ -121,7 +121,7 @@ Campos de cliente (nome, documento, e-mail e endereço) não integram o conjunto
 | `outbox_events` | PK `id`; índice em eventos não publicados | agregado, tipo, versão, payload, correlação e estado de publicação |
 | `processed_messages` | PK composta consumidor/mensagem | instante e correlação; garante idempotência do consumidor |
 
-O modelo físico executável, com restrições e índices, está em [`../infra/database/schema.sql`](../infra/database/schema.sql).
+O modelo físico executável, com restrições e índices, está em [`../infra/database/schema.sql`](../infra/database/schema.sql) e nas migrações incrementais de [`../infra/database/migrations`](../infra/database/migrations).
 
 ## 6. Plano de estatística e perfil dos dados
 
