@@ -8,6 +8,7 @@ import { PostgresDatabase } from './postgres-database.js';
 const migrations = [
   ['001_initial_schema', 'schema.sql'],
   ['002_authentication', 'migrations/002_authentication.sql'],
+  ['003_product_catalog', 'migrations/003_product_catalog.sql'],
 ] as const;
 
 const config = getConfig();
@@ -17,7 +18,8 @@ try {
   for (const [migrationName, filename] of migrations) {
   const schemaPath = fileURLToPath(new URL(`../../../../../infra/database/${filename}`, import.meta.url));
   const sql = await readFile(schemaPath, 'utf8');
-  const checksum = createHash('sha256').update(sql).digest('hex');
+  // O Git pode materializar LF como CRLF no Windows; o conteúdo SQL é o mesmo.
+  const checksum = createHash('sha256').update(sql.replaceAll('\r\n', '\n')).digest('hex');
 
   const applied = await database.transaction(async (client) => {
     await client.query(`

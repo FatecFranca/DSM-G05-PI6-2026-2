@@ -11,6 +11,11 @@ import { AuthError, type AuthRepository, type ResetMailer } from './domain/auth.
 import { PostgresAuthRepository } from './infrastructure/repositories/postgres-auth-repository.js';
 import { ConfiguredResetMailer } from './infrastructure/mail/reset-mailer.js';
 import { registerAuthRoutes } from './presentation/auth-routes.js';
+import { ProductService } from './application/product-service.js';
+import { ProductError } from './domain/product.js';
+import { PostgresProductRepository } from './infrastructure/repositories/postgres-product-repository.js';
+import { CsvProductSource } from './infrastructure/sources/csv-product-source.js';
+import { registerProductRoutes } from './presentation/product-routes.js';
 
 import { InventoryService } from './application/inventory-service.js';
 import { getConfig } from './config.js';
@@ -41,7 +46,7 @@ export async function buildApp(options: BuildAppOptions = {}) {
     return new PostgresInventoryRepository(database);
   })();
   const service = new InventoryService(repository);
-  if (!options.authRepository && !database) { database = new PostgresDatabase(config.databaseUrl, config.databasePoolMax); }
+  if (!database) { database = new PostgresDatabase(config.databaseUrl, config.databasePoolMax); }
   const authService = new AuthService(options.authRepository ?? new PostgresAuthRepository(database!),
     options.mailer ?? new ConfiguredResetMailer(config), config.webUrl, config.registrationEnabled);
 
@@ -52,13 +57,13 @@ export async function buildApp(options: BuildAppOptions = {}) {
   await app.register(helmet, { contentSecurityPolicy: false });
   await app.register(cookie);
   await app.register(cors, { origin: [...new Set([config.webUrl, ...config.corsOrigins])], credentials: true,
-    allowedHeaders: ['Content-Type', 'X-Requested-With'], methods: ['GET', 'POST', 'OPTIONS'] });
+    allowedHeaders: ['Content-Type', 'X-Requested-With'], methods: ['GET', 'POST', 'PUT', 'OPTIONS'] });
   await app.register(rateLimit, { global: true, max: 200, timeWindow: '1 minute' });
   app.setErrorHandler((error, request, reply) => {
     if (error instanceof ZodError) {
       return reply.code(400).send({ message: 'Confira os campos informados.', fields: error.flatten().fieldErrors });
     }
-    if (error instanceof AuthError) {
+    if (error instanceof AuthError || error instanceof ProductError) {
       if (error.statusCode === 429) { reply.header('Retry-After', '900'); }
       return reply.code(error.statusCode).send({ message: error.message });
     }
@@ -87,6 +92,7 @@ export async function buildApp(options: BuildAppOptions = {}) {
   await registerAuthRoutes(app, authService, config);
   await app.register(swaggerUi, { routePrefix: '/docs' });
   await registerRoutes(app, service);
+  await registerProductRoutes(app, new ProductService(new PostgresProductRepository(database), new CsvProductSource()));
 
   app.setNotFoundHandler((request, reply) => {
     reply.code(404).send({

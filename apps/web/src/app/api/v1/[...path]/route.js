@@ -10,7 +10,10 @@ const allowed = new Map([
 async function proxy(request, context) {
   const { path } = await context.params;
   const endpoint = path.join('/');
-  if (allowed.get(endpoint) !== request.method) {
+  const catalogAllowed = (endpoint === 'catalog/products' && ['GET', 'POST'].includes(request.method))
+    || (endpoint === 'catalog/import' && request.method === 'POST')
+    || (/^catalog\/products\/[0-9a-f-]{36}$/.test(endpoint) && request.method === 'PUT');
+  if (allowed.get(endpoint) !== request.method && !catalogAllowed) {
     return Response.json({ message: 'Rota não encontrada.' }, { status: 404 });
   }
   const incomingUrl = new URL(request.url);
@@ -18,7 +21,7 @@ async function proxy(request, context) {
   const session = request.cookies.get('estoque_session');
   if (session) headers.set('Cookie', `estoque_session=${encodeURIComponent(session.value)}`);
   let body;
-  if (request.method === 'POST') {
+  if (['POST', 'PUT'].includes(request.method)) {
     if (request.headers.get('origin') !== incomingUrl.origin
       || request.headers.get('x-requested-with') !== 'EstoqueInteligente'
       || !request.headers.get('content-type')?.startsWith('application/json')) {
@@ -33,7 +36,7 @@ async function proxy(request, context) {
         const { value, done } = await reader.read();
         if (done) break;
         bytes += value.byteLength;
-        if (bytes > 16384) {
+        if (bytes > (endpoint === 'catalog/import' ? 128000 : 16384)) {
           await reader.cancel();
           return Response.json({ message: 'Solicitação muito grande.' }, { status: 413 });
         }
@@ -61,4 +64,4 @@ async function proxy(request, context) {
   }
 }
 
-export { proxy as GET, proxy as POST };
+export { proxy as GET, proxy as POST, proxy as PUT };
