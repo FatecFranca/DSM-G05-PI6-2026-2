@@ -85,4 +85,18 @@ export async function registerRoutes(
       response: successResponse,
     },
   }, () => service.listSyncRuns());
+
+  app.get('/api/v1/datasets/current', {
+    schema: {
+      tags: ['Data'],
+      summary: 'Consulta proveniência, licença e qualidade da base ativa',
+      response: {
+        ...successResponse,
+        404: { type: 'object', additionalProperties: true },
+      },
+    },
+  }, async (_request, reply) => {
+    const dataset = await service.getCurrentDataset();
+    return dataset ?? reply.code(404).send({ message: 'Nenhuma base foi carregada.' });
+  });
 }

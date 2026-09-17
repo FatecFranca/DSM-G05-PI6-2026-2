@@ -1,5 +1,6 @@
 import type {
   DashboardSummary,
+  DatasetStatus,
   ForecastResult,
   ProductFilters,
   ProductList,
@@ -12,4 +13,5 @@ export interface InventoryRepository {
   listProducts(filters: ProductFilters): Promise<ProductList>;
   getForecast(horizon: 7 | 30 | 90, productId?: string): Promise<ForecastResult>;
   listSyncRuns(): Promise<SyncRunList>;
+  getCurrentDataset(): Promise<DatasetStatus | null>;
 }

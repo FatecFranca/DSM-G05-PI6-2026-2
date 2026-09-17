@@ -8,6 +8,7 @@ import { hashToken } from '../src/infrastructure/security/password-hasher.js';
 import type { InventoryRepository } from '../src/domain/inventory-repository.js';
 import type {
   DashboardSummary,
+  DatasetStatus,
   ForecastResult,
   ProductFilters,
   ProductList,
@@ -39,9 +40,12 @@ class FakeInventoryRepository implements InventoryRepository {
         demo: false,
         generatedAt: new Date().toISOString(),
         lastSyncAt: null,
+        dataset: 'UCI Online Retail II (teste)',
+        datasetPeriodEnd: '2011-12-09',
       },
       kpis: {
         stockValue: 184_320,
+        stockValueCurrency: 'GBP',
         activeProducts: 1,
         stockoutRisk: 1,
         serviceLevel: 94.2,
@@ -79,6 +83,10 @@ class FakeInventoryRepository implements InventoryRepository {
 
   public async listSyncRuns(): Promise<SyncRunList> {
     return { data: [], total: 0, demo: false };
+  }
+
+  public async getCurrentDataset(): Promise<DatasetStatus | null> {
+    return null;
   }
 }
 

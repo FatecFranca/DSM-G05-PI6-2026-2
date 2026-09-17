@@ -17,7 +17,17 @@ message EventEnvelope {
     ModelRequested model_requested = 12;
     ModelCompleted model_completed = 13;
     AlertGenerated alert_generated = 14;
+    DomainEvent domain_event = 15;
   }
+}
+
+// Eventos operacionais (produto/estoque) mantêm um envelope estável. O JSON
+// interno é versionado pelo campo event_version e não contém segredos.
+message DomainEvent {
+  string aggregate_type = 1;
+  string aggregate_id = 2;
+  string event_type = 3;
+  string payload_json = 4;
 }
 
 message SyncRequested {

@@ -63,15 +63,16 @@ import { DashboardApiClient } from "@/services/dashboard-api-client";
 const api = new DashboardApiClient();
 const navigation = [
   { label: "Vis\xE3o geral", icon: CircleGauge, href: "#conteudo", active: true },
-  { label: "Produtos", icon: PackageSearch, href: "#produtos" },
+  { label: "Produtos", icon: PackageSearch, href: "/produtos" },
+  { label: "Estoque", icon: Warehouse, href: "/estoque" },
   { label: "Previs\xF5es", icon: ChartNoAxesCombined, href: "#previsoes" },
   { label: "Classifica\xE7\xE3o", icon: Layers3, href: "#classificacao" },
   { label: "Integra\xE7\xF5es", icon: CloudCog, href: "#integracoes" }
 ];
-function formatCurrency(value) {
+function formatCurrency(value, currency = "BRL") {
   return new Intl.NumberFormat("pt-BR", {
     style: "currency",
-    currency: "BRL",
+    currency,
     maximumFractionDigits: 0
   }).format(value);
 }
@@ -285,7 +286,7 @@ function Dashboard({ user }) {
   const loading = summaryRequest.isLoading || forecastRequest.isLoading;
   const validating = summaryRequest.isValidating || forecastRequest.isValidating;
   const metrics = summary ? [
-    { label: "Valor em estoque", value: formatCurrency(summary.kpis.stockValue), trend: "Banco real", trendLabel: "posi\xE7\xE3o atual", icon: Warehouse, tone: "teal", direction: "up" },
+    { label: "Valor em estoque", value: formatCurrency(summary.kpis.stockValue, summary.kpis.stockValueCurrency), trend: "Simulado", trendLabel: "base UCI em GBP", icon: Warehouse, tone: "teal", direction: "up" },
     { label: "Produtos ativos", value: String(summary.kpis.activeProducts), trend: "Cat\xE1logo", trendLabel: "itens monitorados", icon: Boxes, tone: "blue", direction: "up" },
     { label: "Risco de ruptura", value: String(summary.kpis.stockoutRisk), trend: "Prioridade", trendLabel: "reposi\xE7\xE3o necess\xE1ria", icon: AlertTriangle, tone: "red", direction: "down" },
     { label: "N\xEDvel de servi\xE7o", value: `${summary.kpis.serviceLevel.toFixed(1)}%`, trend: "30 dias", trendLabel: "sem ruptura registrada", icon: ShieldCheck, tone: "amber", direction: "up" }
@@ -299,7 +300,7 @@ function Dashboard({ user }) {
         </header>
         <div className="content-wrap">
           <section className="page-intro">
-            <div><p className="eyebrow">VISÃO GERAL</p><h1>Decisões de estoque, mais claras.</h1><p className="muted-copy">Dados operacionais e previsões em uma visão única.</p></div>
+            <div><p className="eyebrow">VISÃO GERAL</p><h1>Decisões de estoque, mais claras.</h1><p className="muted-copy">{summary?.meta.dataset ?? "Dados operacionais e previsões em uma visão única."}{summary?.meta.datasetPeriodEnd ? ` · referência até ${new Intl.DateTimeFormat("pt-BR", { timeZone: "UTC" }).format(new Date(`${summary.meta.datasetPeriodEnd}T00:00:00Z`))}` : ""}</p></div>
             <div className="page-actions">
               <div className="search-box"><Search size={16} /><Input value={query} onChange={(event) => setQuery(event.target.value)} placeholder="Buscar produto ou SKU" /></div>
               <Select value={String(horizon)} onValueChange={(value) => setHorizon(Number(value))}>

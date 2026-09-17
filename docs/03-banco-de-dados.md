@@ -63,30 +63,32 @@ erDiagram
 | `sales_orders` | um pedido de venda | 100 mil–1 milhão/ano | mínimo de 5 anos |
 | `sales_order_items` | um item de pedido | 300 mil–5 milhões/ano | mínimo de 5 anos |
 | `stock_movements` | uma movimentação | 500 mil–10 milhões/ano | mínimo de 2 anos |
+| `retail_sales_facts` | uma linha da fonte desidentificada | ~1 milhão na versão atual | snapshot versionado; particionado por ano |
 | `daily_product_demand` | produto × dia | 365 mil–7,3 milhões/ano | mínimo de 5 anos |
 | `demand_forecasts` | produto × data-alvo × execução | depende do horizonte | 2 anos ou por versão aprovada |
 | `product_analyses` | produto × execução de modelo | dezenas de milhares/mês | 2 anos |
-| `sync_runs` | uma execução de integração | ~365/ano + manuais | 2 anos |
+| `dataset_versions` | uma versão/hash da fonte | poucas versões/ano | permanente para linhagem |
+| `sync_runs` | uma execução de carga | sob demanda/agendada | 2 anos |
 | `outbox_events` | um evento de domínio a publicar | proporcional às alterações | remover após retenção de auditoria |
 | `processed_messages` | uma mensagem × consumidor | proporcional aos eventos | superior à maior janela de reentrega |
 
-Para os maiores volumes, a necessidade de particionamento mensal será decidida após medir tamanho e planos de consulta; não será aplicada prematuramente.
+`retail_sales_facts` já usa particionamento por ano e índices por produto/data e pedido/data. Particionamento mensal só será adotado se planos e medições demonstrarem benefício; `daily_product_demand` permanece agregado para evitar leitura do fato bruto nas telas.
 
 ## 4. Qualificação dos principais campos analíticos
 
 | Campo | Tipo lógico | Natureza estatística | Unidade/escala | Origem | Uso |
 | --- | --- | --- | --- | --- | --- |
 | `product_id` | UUID | qualitativa nominal | identificador | interno | chave de agrupamento |
-| `external_id` | texto | qualitativa nominal | identificador | Bling | deduplicação e rastreio |
-| `sku` | texto | qualitativa nominal | código | Bling | busca e integração |
-| `category_id` | UUID | qualitativa nominal | categoria | Bling/interno | filtro e atributo do produto |
-| `active` | booleano | qualitativa nominal dicotômica | sim/não | Bling | filtro da população |
-| `cost_price` | decimal | quantitativa contínua, razão | BRL | Bling | valor de consumo/ABC |
-| `sale_price` | decimal | quantitativa contínua, razão | BRL | Bling/pedido | receita e atributos |
+| `external_id` | texto | qualitativa nominal | identificador | UCI/interno | deduplicação e rastreio |
+| `sku` | texto | qualitativa nominal | código | UCI/interno | busca e integração |
+| `category_id` | UUID | qualitativa nominal | categoria | interno | filtro e atributo do produto |
+| `active` | booleano | qualitativa nominal dicotômica | sim/não | carga/cadastro | filtro da população |
+| `cost_price` | decimal | quantitativa contínua, razão | moeda do produto | simulado/cadastro | valor de estoque |
+| `sale_price` | decimal | quantitativa contínua, razão | moeda do produto | UCI/cadastro | receita e atributos |
 | `lead_time_days` | inteiro | quantitativa discreta, razão | dias | cadastro complementar | ponto de reposição |
 | `quantity` | decimal | quantitativa contínua, razão | unidade do produto | pedido/movimento | demanda e estoque |
-| `sold_at` | data-hora | temporal | UTC | Bling | ordenação da série |
-| `status` | texto controlado | qualitativa nominal | situação | Bling | exclusão de cancelados |
+| `sold_at` | data-hora | temporal | UTC | UCI | ordenação da série |
+| `status` | texto controlado | qualitativa nominal | situação | derivado da UCI | exclusão de cancelados |
 | `available_quantity` | decimal derivado | quantitativa contínua, razão | unidade do produto | estoque − reservado | risco de ruptura |
 | `demand_date` | data | temporal | dia | derivado | índice da série temporal |
 | `units_sold` | decimal derivado | quantitativa contínua, razão | unidades/dia | itens válidos | variável-alvo |
@@ -112,16 +114,18 @@ Campos de cliente (nome, documento, e-mail e endereço) não integram o conjunto
 | `sales_orders` | PK `id`; única `external_id` | número, data, status, canal, valor total |
 | `sales_order_items` | PK `id`; FK pedido/produto; única pedido + sequência | quantidades, preços, desconto e total |
 | `stock_movements` | PK `id`; FKs produto/depósito | tipo, quantidade com sinal, data e referência |
+| `retail_sales_facts` | PK versão/data/linha; particionada por data | venda desidentificada, cancelamento, duplicidade e hash |
 | `daily_product_demand` | PK composta produto/data | unidades, receita, pedidos, indicador de ruptura |
 | `model_runs` | PK `id` | tarefa, algoritmo, versão, período, estado e métricas JSON |
 | `demand_forecasts` | PK `id`; FKs produto/modelo | data-alvo, horizonte, previsão e intervalo |
 | `product_analyses` | PK `id`; FKs produto/modelo | classes ABC/XYZ, cluster e atributos JSON |
+| `dataset_versions` | PK `id`; únicos versão e hash por fonte | URL, DOI, licença, contagens, período e qualidade |
 | `sync_runs` | PK `id` | fonte, cursor, estado, contagens e erro sanitizado |
 | `data_quality_results` | PK `id`; FK sincronização | regra, severidade, aprovados/reprovados e amostra sanitizada |
 | `outbox_events` | PK `id`; índice em eventos não publicados | agregado, tipo, versão, payload, correlação e estado de publicação |
 | `processed_messages` | PK composta consumidor/mensagem | instante e correlação; garante idempotência do consumidor |
 
-O modelo físico executável, com restrições e índices, está em [`../infra/database/schema.sql`](../infra/database/schema.sql).
+O modelo físico executável, com restrições e índices, está em [`../infra/database/schema.sql`](../infra/database/schema.sql) e nas migrações incrementais de [`../infra/database/migrations`](../infra/database/migrations).
 
 ## 6. Plano de estatística e perfil dos dados
 

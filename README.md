@@ -1,12 +1,12 @@
 # Estoque Inteligente — PI 6º semestre
 
-Projeto interdisciplinar do Grupo 05 de DSM para gestão inteligente de estoque, classificação de produtos e previsão de demanda a partir de dados históricos do Bling.
+Projeto interdisciplinar do Grupo 05 de DSM para gestão inteligente de estoque, classificação de produtos e previsão de demanda a partir de uma base pública versionada.
 
-> **Situação atual:** Web com cadastro, login, recuperação e troca de senha,
-> conectado à API e ao PostgreSQL. A API exige sessão para dados de estoque;
-> o Flutter nativo também possui autenticação e sessão em armazenamento seguro.
-> A carga atual é um seed técnico;
-> nenhuma credencial ou dado real do Bling está versionado.
+> **Situação atual:** Web e Flutter (mobile/desktop) conectados à API e ao
+> PostgreSQL, com autenticação, catálogo, saldos e movimentações. A base oficial
+> do projeto é a **UCI Online Retail II**, licenciada sob CC BY 4.0. O pipeline
+> reproduzível carrega mais de um milhão de linhas, classifica ABC/XYZ, agrupa
+> produtos e publica previsões versionadas. Nenhum dado pessoal da fonte é salvo.
 
 ## Entregas da 1ª sprint
 
@@ -31,23 +31,31 @@ Projeto interdisciplinar do Grupo 05 de DSM para gestão inteligente de estoque,
 ```text
 apps/
   api/       API REST Node.js/Fastify
+  ml/        ingestão, qualidade e modelos Python/scikit-learn
   mobile/    aplicativo Flutter para dispositivos móveis e desktop
   web/       dashboard Next.js
 docs/        documentação acadêmica, diagramas e decisões
 infra/
-  database/  modelo físico inicial PostgreSQL
+  database/  PostgreSQL operacional e fatos analíticos particionados
   messaging/ contratos Protobuf dos eventos distribuídos
 ```
 
-Os clientes estão separados da API para que Web, Mobile e Desktop compartilhem as mesmas regras de negócio. Mobile e Desktop usam uma base Flutter adaptativa; o Web usa Next.js. A rotina de mineração será executada em jobs Python independentes e persistirá somente os resultados versionados que a API precisa consultar.
+Os clientes estão separados da API para que Web, Mobile e Desktop compartilhem as mesmas regras de negócio. Mobile e Desktop usam uma base Flutter adaptativa; o Web usa Next.js. Os jobs Python mantêm linhagem por hash, métricas e artefatos; a API consulta apenas resultados publicados no PostgreSQL.
 
 ## Executar localmente
 
-Pré-requisitos: Node.js 22 ou superior, npm 10 ou superior, PostgreSQL 18 e Flutter 3.41 ou superior.
+Para preparar uma máquina do zero, siga o guia completo de
+[primeira execução](docs/11-primeira-execucao.md).
+
+Pré-requisitos: Node.js 22 ou superior, npm 10 ou superior, Python 3.12, PostgreSQL 18 e Flutter 3.41 ou superior.
 
 ```bash
 npm install
-npm run db:setup
+npm run db:start
+npm run db:migrate
+py -m venv .venv
+npm run ml:setup
+npm run data:setup
 npm run dev
 ```
 
@@ -60,8 +68,8 @@ A instância local deste computador usa `127.0.0.1:5433`, banco
 - API: `http://localhost:3333`
 - Documentação OpenAPI: `http://localhost:3333/docs`
 
-Crie sua conta em `http://localhost:3000/cadastro`. Detalhes de segurança, testes
-e recuperação de senha local: [Autenticação](docs/08-autenticacao.md).
+Crie sua conta em `http://localhost:3000/cadastro`. Detalhes: [Autenticação](docs/08-autenticacao.md),
+[Catálogo](docs/09-catalogo-produtos.md) e [Movimentações de estoque](docs/10-movimentacoes-estoque.md).
 
 Também é possível iniciar os projetos separadamente:
 
@@ -72,11 +80,28 @@ npm run mobile
 npm run desktop
 ```
 
+`npm run data:setup` baixa a base diretamente da UCI, valida o SHA-256,
+desidentifica a carga e treina os modelos. Download, planilha e artefatos são
+ignorados pelo Git. A carga pode ser repetida sem duplicar registros.
+
+O conjunto de vendas não fornece estoque físico. Para demonstrar as regras de
+movimentação, o pipeline cria o depósito claramente identificado como
+`Depósito simulado (UCI)` e calcula uma posição inicial reproduzível. Valores
+monetários da base são exibidos em GBP, sem mistura silenciosa de moedas.
+
+Para executar a publicação assíncrona, configure credenciais do Google Cloud ou
+o emulador do Pub/Sub, defina `MESSAGING_MODE=google-pubsub` e execute:
+
+```bash
+npm run worker:outbox
+```
+
 ## Validação
 
 ```bash
 npm run lint
 npm run test
+npm run test:ml
 npm run build
 ```
 
@@ -89,6 +114,10 @@ npm run build
 | Gabriel Aleixo |
 | Dimerson Ferreira |
 
-## Política de dados
+## Fonte e política de dados
 
-Antes de importar o ambiente de produção, o grupo deverá obter autorização do responsável pelos dados, criar credenciais exclusivas de leitura, remover dados pessoais desnecessários e executar uma carga piloto anonimizada. Tokens do Bling e segredos de nuvem devem permanecer apenas no gerenciador de segredos e nos arquivos locais ignorados pelo Git.
+A [UCI Online Retail II](https://doi.org/10.24432/C5CG6D) é distribuída sob
+[CC BY 4.0](https://creativecommons.org/licenses/by/4.0/), permitindo adaptação
+e uso comercial com atribuição. O projeto não persiste o campo `Customer ID`.
+Arquivos brutos, credenciais, e-mails e artefatos de modelo permanecem fora do
+Git; em nuvem, segredos ficam no Secret Manager e dados grandes no Object Storage.

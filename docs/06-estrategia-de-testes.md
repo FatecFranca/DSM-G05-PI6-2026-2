@@ -69,7 +69,7 @@ A API é a fonte do comportamento. Clientes validam apresentação, acessibilida
 ## 6. Dados de teste
 
 - fixtures sintéticas pequenas e legíveis ficam no repositório;
-- nenhum teste utiliza dado pessoal ou token do Bling;
+- nenhum teste utiliza dado pessoal, planilha completa ou segredo de nuvem;
 - relógio e geradores aleatórios são controlados por seed;
 - integração usa banco e broker isolados por execução;
 - snapshots reais, se autorizados, permanecem fora do Git e são anonimizados;
@@ -103,7 +103,7 @@ O workflow `.github/workflows/ci.yml` (Quality checks) executa em cada **push pa
 
 Dois jobs rodam em paralelo:
 
-- `web-api`: Node.js 24, `npm ci`, lint do web/API, verificação TypeScript da API, testes unitários, testes de autenticação com PostgreSQL 18 real e build do web/API.
+- `web-api`: Node.js 24, `npm ci`, lint do web/API, verificação TypeScript da API, testes unitários, testes de autenticação e catálogo com PostgreSQL 18 real e build do web/API.
 - `flutter`: Flutter 3.41.7, instalação de dependências, `flutter analyze` e todos os testes de controllers, widgets e layouts.
 
 O PostgreSQL é criado no runner com credenciais exclusivas de teste e descartado ao final. A suíte de autenticação cria e remove seu próprio schema temporário. Não é necessário configurar secrets, Gmail, Resend ou o `.env` local no GitHub: a entrega de e-mails é simulada nos testes, não enviada a pessoas reais.

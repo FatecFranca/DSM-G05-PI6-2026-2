@@ -23,4 +23,8 @@ export class InventoryService {
   public listSyncRuns() {
     return this.repository.listSyncRuns();
   }
+
+  public getCurrentDataset() {
+    return this.repository.getCurrentDataset();
+  }
 }

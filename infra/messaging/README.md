@@ -4,7 +4,7 @@ O arquivo `inventory_events.proto` define o envelope comum e os payloads v1 usad
 
 ## Convenções
 
-- tópicos: `inventory.<evento>.v1`;
+- tópico operacional: `inventory-domain-events` (atributo `eventType` para filtros);
 - `message_id`: UUID gerado uma única vez pelo produtor;
 - `correlation_id`: UUID preservado durante todo o fluxo distribuído;
 - instantes: UTC no tipo `google.protobuf.Timestamp`;
@@ -14,7 +14,7 @@ O arquivo `inventory_events.proto` define o envelope comum e os payloads v1 usad
 
 ## Transporte
 
-As bibliotecas internas usam gRPC/HTTP autenticado para publicar e consumir. Assinaturas push, quando utilizadas com Cloud Run, usam HTTPS. O ambiente local usará o emulador oficial do Pub/Sub para testes de integração.
+O worker `npm run worker:outbox` lê a outbox com bloqueio concorrente, codifica o envelope em Protocol Buffers e publica pelo cliente oficial do Google Pub/Sub (gRPC/HTTP autenticado). Assinaturas push, quando utilizadas com Cloud Run, usam HTTPS. O ambiente local pode usar o emulador oficial do Pub/Sub.
 
 ## Falhas
 

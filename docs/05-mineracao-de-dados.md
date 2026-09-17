@@ -1,169 +1,135 @@
-# Mineração de dados — base e planejamento inicial
+# Mineração de dados — base, execução e avaliação
 
-## 1. Perguntas de negócio
+## Fonte oficial
 
-1. Quais produtos mais contribuem para o valor movimentado e exigem maior controle?
-2. Quais produtos possuem demanda estável, variável ou intermitente?
-3. Que grupos de produtos apresentam comportamento semelhante de giro, margem, sazonalidade e estoque?
-4. Quanto será demandado por produto nos próximos 7, 30 e 90 dias?
-5. Quais itens podem entrar em ruptura antes de uma reposição chegar?
+O projeto usa a [Online Retail II](https://doi.org/10.24432/C5CG6D), publicada
+por Daqing Chen no UCI Machine Learning Repository. A licença **CC BY 4.0**
+permite compartilhar e adaptar a base para qualquer finalidade, inclusive
+profissional/comercial, desde que a atribuição seja mantida.
 
-## 2. Definição da base
+| Propriedade | Valor verificado |
+| --- | --- |
+| Arquivo | `online_retail_II.xlsx` |
+| Período | 01/12/2009 a 09/12/2011 |
+| Linhas lidas | 1.067.371 |
+| Vendas válidas carregadas | 1.003.744 |
+| Produtos elegíveis | 4.737 |
+| SHA-256 | `bcbe73b35f5b7babf197fb0cb983a11f5d9ff929078d4aa53d171b1f2df2e980` |
+| Moeda | GBP |
 
-### Fonte primária
+O download é feito diretamente da UCI por `npm run data:download`. O arquivo
+bruto não é versionado no Git. Sua URL, versão, hash, licença, intervalo,
+contagens e resumo de qualidade ficam em `dataset_versions`.
 
-Dados autorizados do sistema Bling em produção, obtidos por integração oficial e incremental. A carga mínima desejada contém:
+### Privacidade e limitações
 
-- catálogo: identificador externo, SKU, nome, categoria, situação, preços e fornecedor;
-- vendas: pedido, data, situação, canal e valor;
-- itens: produto, quantidade, preço, desconto e total;
-- estoque: depósito, saldo, reserva e instante da posição;
-- movimentações e devoluções, quando disponíveis e necessárias;
-- campos complementares internos: prazo de reposição e estoque mínimo.
+O campo `Customer ID` é contado para análise de completude, mas **não é
+armazenado**. Cancelamentos, duplicidades, preços/quantidades inválidos e códigos
+que não representam mercadorias são preservados no fato bruto desidentificado e
+excluídos da demanda válida conforme regras auditáveis.
 
-Dados de clientes não são necessários para os objetivos atuais e devem ser excluídos ou anonimizados.
+A fonte não contém custo, saldo físico, lead time ou ruptura. Esses atributos
+não podem ser inferidos como verdade. Para a demonstração operacional, um
+depósito chamado `Depósito simulado (UCI)` recebe saldo inicial determinístico;
+custo e estoque mínimo são marcados/documentados como simulações. Venda
+observada também pode subestimar demanda quando houve falta de estoque.
 
-### Base externa para desenvolvimento e validação
-
-Enquanto o histórico autorizado do Bling não estiver disponível, o projeto usará a
-base [Retail Sales Data](https://www.kaggle.com/datasets/berkayalan/retail-sales-data),
-publicada no Kaggle sob **CC0 1.0 (domínio público)**. Essa licença permite copiar,
-modificar e utilizar os dados inclusive para fins comerciais, sem restringir o
-software ou o modelo a uso acadêmico.
-
-A versão obtida em 08/09/2026 contém:
-
-- `sales_daily.csv`: 19.454.838 observações e os campos produto, loja, data,
-  vendas, receita, estoque, preço e promoções;
-- `product_hierarchy.csv`: dimensões físicas, cluster e cinco níveis de
-  hierarquia dos produtos;
-- `store_cities.csv`: tipo, tamanho e cidade das lojas;
-- período informado pela fonte: 2017 a 2019, referente a uma varejista turca;
-- SHA-256 de `sales_daily.csv`:
-  `049021871734B9CF2382FEBD09D0397B667B65E367DAB8CCD2874E8165A5384E`.
-
-Ela será usada para desenvolver ingestão, perfil, atributos, agrupamento,
-classificação e previsão. Apesar da licença permissiva, um modelo treinado apenas
-nessa base não será tratado como adequado para decisões de outra empresa: antes
-de produção, deverá ser recalibrado e reavaliado com o histórico autorizado do
-Bling. A base M5 não foi escolhida como fonte oficial porque sua licença é
-condicionada às regras da competição.
-
-### Estratégia de integração com o Bling
-
-A documentação vigente do Bling define uma API v3 REST com autorização OAuth 2.0 pelo fluxo Authorization Code. A integração deve executar troca e renovação de tokens somente no servidor, armazenar o segredo fora do código e adotar o formato JWT recomendado pelo provedor. A primeira versão fará reconciliação incremental diária; webhooks de produto, pedido e estoque podem reduzir a latência em uma etapa posterior, sem substituir a reconciliação diária contra perdas de eventos.
-
-A rotina deverá respeitar os limites publicados da API, paginar respostas, aplicar espera exponencial em falhas transitórias e persistir o cursor apenas após a transação local ser concluída.
-
-### Unidade de análise
-
-- **previsão:** produto × dia (`daily_product_demand`);
-- **classificação/agrupamento:** produto × janela de análise;
-- **painel operacional:** produto × depósito na posição mais recente.
-
-### Período e corte
-
-Desejável: 24 meses ou mais. Mínimo inicial: 12 meses para capturar parte da sazonalidade. O conjunto de teste usa as semanas mais recentes e nunca é embaralhado, evitando vazamento temporal.
-
-## 3. Processo CRISP-DM
+## Processo reproduzível (CRISP-DM)
 
 ```mermaid
 flowchart LR
-    A[Entendimento do negócio] --> B[Entendimento dos dados]
-    B --> C[Preparação]
-    C --> D[Modelagem]
-    D --> E[Avaliação temporal]
-    E --> F[Publicação e monitoramento]
-    E -->|resultado insuficiente| C
-    F -->|drift ou erro| B
+    N[Negócio] --> D[Entendimento dos dados]
+    D --> I[Ingestão e qualidade]
+    I --> F[Atributos sem vazamento]
+    F --> M[Modelos]
+    M --> V[Validação temporal]
+    V --> P[Publicação versionada]
+    V -->|resultado insuficiente| F
 ```
 
-## 4. Preparação dos dados
+```powershell
+npm run db:start
+npm run db:migrate
+py -m venv .venv
+npm run ml:setup
+npm run data:setup
+```
 
-1. mapear estados de pedido válidos, cancelamentos e devoluções;
-2. converter datas para uma referência única e derivar calendário local;
-3. eliminar duplicidades por identificador externo e sequência do item;
-4. preencher a grade diária por produto, distinguindo zero de venda de dado ausente;
-5. criar atributos de calendário: dia da semana, mês, feriado, início/fim de mês;
-6. criar defasagens e médias móveis usando somente valores anteriores ao instante previsto;
-7. calcular frequência, recência, giro, margem, coeficiente de variação e proporção de zeros;
-8. detectar valores extremos e preservá-los quando representarem eventos reais;
-9. separar treino, validação e teste em ordem cronológica;
-10. versionar conjunto, parâmetros, métricas e artefato.
+A carga usa `COPY`, uma tabela temporária, transação única e chaves de origem.
+Reexecutar o comando com o mesmo hash não duplica dados. Os fatos de venda são
+particionados por ano em `retail_sales_facts`; séries diárias agregadas ficam em
+`daily_product_demand`. Essa separação reduz leitura e custo para os modelos.
 
-## 5. Técnicas planejadas
+## Técnicas implementadas
 
-### 5.1 Classificação de produtos
+### Classificação por regras: ABC/XYZ
 
-Não supervisionada por regras de negócio:
+- ABC usa participação acumulada na receita: A até 80%, B até 95%, C restante;
+- XYZ usa coeficiente de variação e proporção de dias sem venda;
+- a matriz combinada permite orientar níveis de serviço e prioridade.
 
-- **ABC:** participação acumulada no valor de consumo/receita;
-- **XYZ:** regularidade, usando coeficiente de variação e frequência de demanda zero;
-- matriz combinada `AX` a `CZ` para orientar prioridade e política de estoque.
+### Aprendizado não supervisionado
 
-Caso exista posteriormente um rótulo confiável (por exemplo, “entrou em ruptura nos próximos 30 dias”), serão avaliados modelos supervisionados de classificação, como regressão logística, Random Forest e Gradient Boosting. Métricas: precisão, recall, F1 e PR-AUC, com ênfase em recall para risco de ruptura.
+K-Means usa unidades, receita, média diária, coeficiente de variação, proporção
+de zeros e preço médio. Grandezas assimétricas recebem `log1p`, e os atributos
+são padronizados. O número de grupos entre 2 e 6 é escolhido pelo maior
+silhouette score, com `random_state=42`.
 
-### 5.2 Agrupamento
+Resultado da execução atual: **2 clusters**, silhouette **0,358661**.
 
-Algoritmos candidatos:
+### Aprendizado supervisionado — classificação
 
-- K-Means como linha de base para atributos padronizados e numéricos;
-- agrupamento hierárquico para interpretar relações entre grupos;
-- HDBSCAN se a análise revelar formatos irregulares e muitos ruídos.
+Uma Random Forest prevê se o produto terá alta demanda no terço final do
+histórico usando somente atributos calculados nos dois primeiros terços. A
+separação de produtos para teste é estratificada e reprodutível.
 
-Atributos candidatos: vendas médias, desvio, coeficiente de variação, proporção de zeros, intervalo médio entre vendas, giro, margem, preço, lead time e tendência. Número e utilidade dos grupos serão avaliados por silhouette score, Davies–Bouldin, estabilidade e interpretação de negócio. O cluster não terá uma ordem implícita.
+| Métrica | Resultado |
+| --- | ---: |
+| Accuracy | 0,960338 |
+| Precisão | 0,962521 |
+| Recall | 0,957627 |
+| F1 | 0,960068 |
 
-### 5.3 Previsão de demanda
+Essas métricas validam o experimento nesta população histórica; não garantem o
+mesmo desempenho em outra empresa ou período.
 
-Ordem de experimentação:
+### Aprendizado supervisionado — previsão
 
-1. **Naive sazonal** como linha de base obrigatória;
-2. médias móveis e suavização exponencial;
-3. ETS/ARIMA para séries densas e suficientemente longas;
-4. Croston/SBA/TSB para demanda intermitente;
-5. modelos globais baseados em árvores com defasagens e atributos de calendário quando houver muitos produtos.
+O modelo global `HistGradientBoostingRegressor` usa lags 1/7/14, médias móveis
+7/28 e calendário. Os 30 dias finais são mantidos fora do treino. O modelo
+atende os produtos de maior volume; séries restantes usam média por dia da
+semana como fallback explícito. São publicadas previsões de 7, 30 e 90 dias.
 
-O algoritmo final pode variar por perfil de série. Métricas principais: WAPE e MAE; sMAPE será complementar. MAPE não será a métrica principal por falhar em dias com demanda zero. A avaliação usa backtesting com janelas deslizantes nos horizontes de 7, 30 e 90 dias.
+| Métrica de validação | Modelo | Naive sazonal |
+| --- | ---: | ---: |
+| WAPE | 0,897161 | 1,015396 |
+| MAE do modelo | 51,326566 | — |
 
-## 6. Critérios de aceite analíticos
+O WAPE ainda é alto por causa da demanda intermitente e dos picos da base. O
+resultado supera o baseline, mas deve ser tratado como uma primeira versão, não
+como recomendação automática de compra.
 
-| Entrega | Critério inicial |
-| --- | --- |
-| Qualidade da base | regras críticas aprovadas e relatório de cobertura publicado |
-| ABC/XYZ | 100% dos produtos elegíveis classificados e limites registrados |
-| Clusters | solução estável, interpretável e melhor que segmentação aleatória nas métricas escolhidas |
-| Previsão | WAPE menor que a naive sazonal no teste ou justificativa para manter a linha de base |
-| Rastreabilidade | toda saída referencia execução, algoritmo, parâmetros e janela de dados |
-| Atualização | execução diária idempotente e monitorada |
+## Rastreabilidade e publicação
 
-Metas numéricas definitivas só serão fixadas após conhecer a variabilidade e a ocorrência de demanda zero.
+- `model_runs` guarda tarefa, algoritmo, janela, parâmetros, métricas, dataset e
+  URI do artefato;
+- `product_analyses` guarda ABC/XYZ, cluster e probabilidade supervisionada;
+- `demand_forecasts` guarda execução, data-alvo, horizonte e intervalo;
+- artefatos Joblib ficam em `models/` (ignorado pelo Git);
+- `GET /api/v1/datasets/current` expõe proveniência e qualidade;
+- o painel usa a data máxima da versão carregada, nunca `CURRENT_DATE`, evitando
+  gráficos vazios para uma base histórica.
 
-## 7. Planejamento de experimentos
+## Testes e próximos experimentos
 
-| Etapa | Saída | Dependência |
-| --- | --- | --- |
-| Extração piloto | amostra anonimizada + dicionário da origem | autorização e credencial de leitura |
-| Perfil | relatório estatístico e problemas de qualidade | amostra piloto |
-| Dataset v1 | série diária e atributos reproduzíveis | regras de status/devolução validadas |
-| Baselines | naive, ABC e XYZ versionados | dataset v1 |
-| Clustering | comparação de algoritmos e perfis dos grupos | atributos escalados |
-| Forecast | backtesting por horizonte e tipo de demanda | histórico mínimo |
-| Publicação | tabelas de resultados consultadas pela API | modelo aprovado |
-| Monitoramento | erro realizado, cobertura e drift | vendas posteriores |
+Os testes unitários verificam cálculo de atributos e reprodutibilidade do
+agrupamento. A CI instala as dependências Python e executa os testes sem baixar
+a base grande. Próximos experimentos: backtesting em múltiplas janelas, Croston
+para demanda intermitente, comparação com LightGBM/ETS e calibração dos
+intervalos por perfil XYZ.
 
-## 8. Governança e riscos
+## Atribuição
 
-- manter snapshot bruto criptografado somente se autorizado e pelo prazo aprovado;
-- não versionar CSV real, tokens, documentos fiscais ou informações pessoais;
-- registrar linhagem do dado da origem até a previsão;
-- impedir que dados futuros entrem em atributos de treino;
-- revisar viés de disponibilidade: venda observada pode ser menor que demanda real quando houve ruptura;
-- aplicar validação humana antes de decisões de compra;
-- retreinar por calendário ou por degradação comprovada, não a cada acesso ao painel.
-
-## 9. Referências da fonte
-
-- [Visão geral e autenticação da API do Bling](https://developer.bling.com.br/bling-api)
-- [Aplicativos e fluxo de autorização](https://developer.bling.com.br/aplicativos)
-- [Webhooks disponíveis no Bling](https://developer.bling.com.br/webhooks)
-- [Limites de uso da API](https://developer.bling.com.br/limites)
+Chen, D. (2012). *Online Retail II*. UCI Machine Learning Repository.
+DOI: [10.24432/C5CG6D](https://doi.org/10.24432/C5CG6D). Licença:
+[Creative Commons Attribution 4.0](https://creativecommons.org/licenses/by/4.0/).

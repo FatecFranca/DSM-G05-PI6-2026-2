@@ -2,6 +2,7 @@ import type { InventoryRepository } from '../../domain/inventory-repository.js';
 import type {
   ClassificationSummary,
   DashboardSummary,
+  DatasetStatus,
   DemandPoint,
   ForecastResult,
   ProductFilters,
@@ -47,11 +48,15 @@ type ProductRow = {
 };
 
 const productProjection = `
-  WITH latest_analysis AS (
+  WITH anchor AS (
+    SELECT id, period_ended_on AS day FROM dataset_versions
+    WHERE status = 'ready' ORDER BY imported_at DESC NULLS LAST LIMIT 1
+  ), latest_analysis AS (
     SELECT DISTINCT ON (pa.product_id)
       pa.product_id, pa.abc_class, pa.xyz_class
     FROM product_analyses pa
     JOIN model_runs mr ON mr.id = pa.model_run_id AND mr.status = 'succeeded'
+    JOIN anchor a ON a.id = mr.dataset_version_id
     ORDER BY pa.product_id, pa.analyzed_at DESC, mr.created_at DESC
   ), stock AS (
     SELECT product_id, SUM(available_quantity) AS available
@@ -59,15 +64,16 @@ const productProjection = `
     GROUP BY product_id
   ), demand AS (
     SELECT product_id, SUM(units_sold) / 30.0 AS daily_average
-    FROM daily_product_demand
-    WHERE demand_date BETWEEN CURRENT_DATE - 29 AND CURRENT_DATE
+    FROM daily_product_demand d JOIN anchor a ON a.id = d.dataset_version_id
+    WHERE demand_date BETWEEN a.day - 29 AND a.day
     GROUP BY product_id
   ), forecast AS (
     SELECT df.product_id, SUM(df.predicted_quantity) AS predicted
     FROM demand_forecasts df
     JOIN model_runs mr ON mr.id = df.model_run_id AND mr.status = 'succeeded'
+    JOIN anchor a ON a.id = mr.dataset_version_id
     WHERE df.horizon_days = 30
-      AND df.target_date BETWEEN CURRENT_DATE + 1 AND CURRENT_DATE + 30
+      AND df.target_date BETWEEN a.day + 1 AND a.day + 30
     GROUP BY df.product_id
   ), projected AS (
     SELECT
@@ -108,7 +114,7 @@ export class PostgresInventoryRepository implements InventoryRepository {
   }
 
   public async getDashboardSummary(): Promise<DashboardSummary> {
-    const [kpis, series, classes, products, sync] = await Promise.all([
+    const [kpis, series, classes, products, sync, dataset] = await Promise.all([
       this.database.query<{
         stock_value: string;
         active_products: string;
@@ -116,25 +122,29 @@ export class PostgresInventoryRepository implements InventoryRepository {
         service_level: string;
       }>(`${productProjection}
         SELECT
-          COALESCE((SELECT SUM(il.available_quantity * COALESCE(p.cost_price, 0)) FROM inventory_levels il JOIN products p ON p.id = il.product_id WHERE p.active), 0) AS stock_value,
+          COALESCE((SELECT SUM(il.available_quantity * COALESCE(p.cost_price, 0)) FROM inventory_levels il JOIN products p ON p.id = il.product_id WHERE p.active AND p.currency='GBP'), 0) AS stock_value,
           COUNT(*) AS active_products,
           COUNT(*) FILTER (WHERE risk = 'critical') AS stockout_risk,
-          COALESCE((SELECT ROUND(100.0 * (1 - AVG(CASE WHEN was_stockout THEN 1 ELSE 0 END)), 1) FROM daily_product_demand WHERE demand_date >= CURRENT_DATE - 29), 100) AS service_level
+          COALESCE((SELECT ROUND(100.0 * (1 - AVG(CASE WHEN d.was_stockout THEN 1 ELSE 0 END)), 1)
+                    FROM daily_product_demand d JOIN anchor a ON a.id=d.dataset_version_id
+                    WHERE d.demand_date >= a.day - 29), 100) AS service_level
         FROM projected`),
       this.database.query<{ day: string; actual: string | null; forecast: string | null; lower: string | null; upper: string | null }>(`
-        WITH calendar AS (
-          SELECT day::date FROM generate_series(CURRENT_DATE - 6, CURRENT_DATE + 7, INTERVAL '1 day') AS day
+        WITH anchor AS (SELECT id,period_ended_on AS day FROM dataset_versions WHERE status='ready' ORDER BY imported_at DESC NULLS LAST LIMIT 1),
+        calendar AS (
+          SELECT value::date AS day FROM anchor,generate_series(anchor.day - 6, anchor.day + 7, INTERVAL '1 day') AS value
         ), actual AS (
           SELECT demand_date AS day, SUM(units_sold) AS quantity
-          FROM daily_product_demand
-          WHERE demand_date BETWEEN CURRENT_DATE - 6 AND CURRENT_DATE
+          FROM daily_product_demand d JOIN anchor a ON a.id=d.dataset_version_id
+          WHERE demand_date BETWEEN a.day - 6 AND a.day
           GROUP BY demand_date
         ), predicted AS (
           SELECT target_date AS day, SUM(predicted_quantity) AS quantity,
                  SUM(lower_bound) AS lower, SUM(upper_bound) AS upper
           FROM demand_forecasts df
           JOIN model_runs mr ON mr.id = df.model_run_id AND mr.status = 'succeeded'
-          WHERE horizon_days = 7 AND target_date BETWEEN CURRENT_DATE + 1 AND CURRENT_DATE + 7
+          JOIN anchor a ON a.id=mr.dataset_version_id
+          WHERE horizon_days = 7 AND target_date BETWEEN a.day + 1 AND a.day + 7
           GROUP BY target_date
         )
         SELECT calendar.day::text, actual.quantity AS actual, predicted.quantity AS forecast,
@@ -144,15 +154,16 @@ export class PostgresInventoryRepository implements InventoryRepository {
         LEFT JOIN predicted USING (day)
         ORDER BY calendar.day`),
       this.database.query<{ abc_class: 'A' | 'B' | 'C'; products: string; revenue: string }>(`
-        WITH latest AS (
+        WITH anchor AS (SELECT id,period_ended_on AS day FROM dataset_versions WHERE status='ready' ORDER BY imported_at DESC NULLS LAST LIMIT 1), latest AS (
           SELECT DISTINCT ON (pa.product_id) pa.product_id, pa.abc_class
           FROM product_analyses pa
           JOIN model_runs mr ON mr.id = pa.model_run_id AND mr.status = 'succeeded'
+          JOIN anchor a ON a.id=mr.dataset_version_id
           ORDER BY pa.product_id, mr.created_at DESC
         ), revenue AS (
           SELECT product_id, SUM(gross_revenue) AS amount
-          FROM daily_product_demand
-          WHERE demand_date >= CURRENT_DATE - 29
+          FROM daily_product_demand d JOIN anchor a ON a.id=d.dataset_version_id
+          WHERE demand_date >= a.day - 29
           GROUP BY product_id
         )
         SELECT latest.abc_class, COUNT(*) AS products, COALESCE(SUM(revenue.amount), 0) AS revenue
@@ -162,8 +173,11 @@ export class PostgresInventoryRepository implements InventoryRepository {
         ORDER BY latest.abc_class`),
       this.queryProducts({}, true),
       this.database.query<{ finished_at: Date | null }>(`
-        SELECT finished_at FROM sync_runs WHERE status IN ('succeeded', 'partial')
+        SELECT finished_at FROM sync_runs WHERE status IN ('succeeded', 'partial') AND dataset_version_id IS NOT NULL
         ORDER BY finished_at DESC NULLS LAST LIMIT 1`),
+      this.database.query<{ version: string; period_ended_on: string | null }>(`
+        SELECT version,period_ended_on::text FROM dataset_versions WHERE status='ready'
+        ORDER BY imported_at DESC NULLS LAST LIMIT 1`),
     ]);
 
     const kpi = kpis.rows[0];
@@ -189,9 +203,12 @@ export class PostgresInventoryRepository implements InventoryRepository {
         demo: false,
         generatedAt: new Date().toISOString(),
         lastSyncAt: sync.rows[0]?.finished_at?.toISOString() ?? null,
+        dataset: dataset.rows[0]?.version ? `UCI Online Retail II (${dataset.rows[0].version})` : null,
+        datasetPeriodEnd: dataset.rows[0]?.period_ended_on ?? null,
       },
       kpis: {
         stockValue: asNumber(kpi?.stock_value ?? 0),
+        stockValueCurrency: 'GBP',
         activeProducts: asNumber(kpi?.active_products ?? 0),
         stockoutRisk: asNumber(kpi?.stockout_risk ?? 0),
         serviceLevel: asNumber(kpi?.service_level ?? 100),
@@ -248,10 +265,10 @@ export class PostgresInventoryRepository implements InventoryRepository {
       lower: string | null;
       upper: string | null;
     }>(`
-      WITH actual AS (
+      WITH anchor AS (SELECT id,period_ended_on AS day FROM dataset_versions WHERE status='ready' ORDER BY imported_at DESC NULLS LAST LIMIT 1), actual AS (
         SELECT demand_date AS day, SUM(units_sold) AS quantity
-        FROM daily_product_demand
-        WHERE demand_date BETWEEN CURRENT_DATE - 13 AND CURRENT_DATE
+        FROM daily_product_demand d JOIN anchor a ON a.id=d.dataset_version_id
+        WHERE demand_date BETWEEN a.day - 13 AND a.day
           AND ($1::uuid IS NULL OR product_id = $1)
         GROUP BY demand_date
       ), predicted AS (
@@ -259,8 +276,9 @@ export class PostgresInventoryRepository implements InventoryRepository {
                SUM(lower_bound) AS lower, SUM(upper_bound) AS upper
         FROM demand_forecasts df
         JOIN model_runs mr ON mr.id = df.model_run_id AND mr.status = 'succeeded'
+        JOIN anchor a ON a.id=mr.dataset_version_id
         WHERE df.horizon_days = $2
-          AND df.target_date BETWEEN CURRENT_DATE + 1 AND CURRENT_DATE + $2
+          AND df.target_date BETWEEN a.day + 1 AND a.day + $2
           AND ($1::uuid IS NULL OR df.product_id = $1)
         GROUP BY target_date
       )
@@ -316,5 +334,34 @@ export class PostgresInventoryRepository implements InventoryRepository {
       recordsProcessed: asNumber(row.records_processed),
     }));
     return { data, total: data.length, demo: false };
+  }
+
+  public async getCurrentDataset(): Promise<DatasetStatus | null> {
+    const result = await this.database.query<{
+      slug: string; version: string; status: string; source_url: string; doi: string; license: string;
+      file_sha256: string; records_read: string; records_accepted: string; records_rejected: string;
+      period_started_on: string | null; period_ended_on: string | null; imported_at: Date | null;
+      quality_summary: Record<string, unknown>;
+    }>(`SELECT slug,version,status,source_url,doi,license,file_sha256,records_read,records_accepted,
+              records_rejected,period_started_on::text,period_ended_on::text,imported_at,quality_summary
+         FROM dataset_versions WHERE status='ready' ORDER BY imported_at DESC NULLS LAST LIMIT 1`);
+    const row = result.rows[0];
+    if (!row) return null;
+    return {
+      name: row.slug,
+      version: row.version,
+      status: row.status,
+      sourceUrl: row.source_url,
+      doi: row.doi,
+      license: row.license,
+      fileSha256: row.file_sha256,
+      recordsRead: asNumber(row.records_read),
+      recordsAccepted: asNumber(row.records_accepted),
+      recordsRejected: asNumber(row.records_rejected),
+      periodStartedOn: row.period_started_on,
+      periodEndedOn: row.period_ended_on,
+      importedAt: row.imported_at?.toISOString() ?? null,
+      qualitySummary: row.quality_summary,
+    };
   }
 }
