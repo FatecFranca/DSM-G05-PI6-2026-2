@@ -5,6 +5,7 @@ const allowed = new Map([
   ['auth/register', 'POST'], ['auth/logout', 'POST'], ['auth/forgot-password', 'POST'],
   ['auth/reset-password', 'POST'], ['auth/change-password', 'POST'],
   ['dashboard/summary', 'GET'], ['products', 'GET'], ['forecasts', 'GET'], ['sync-runs', 'GET'],
+  ['datasets/current', 'GET'],
 ]);
 
 async function proxy(request, context) {

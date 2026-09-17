@@ -20,6 +20,9 @@ class DashboardApiClient {
       signal
     });
     if (!response.ok) {
+      if (response.status === 404 && path === '/api/v1/datasets/current') {
+        throw new Error('Nenhuma base foi carregada. Siga o guia de primeira execução para importar os dados.');
+      }
       if (response.status === 401 && typeof window !== 'undefined') {
         window.location.replace('/login');
         throw new Error('Sua sessão expirou. Entre novamente.');

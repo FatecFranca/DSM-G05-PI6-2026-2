@@ -98,6 +98,9 @@ npm run worker:outbox
 
 ## Validação
 
+Veja também a [interface e identidade visual](docs/12-interface-e-identidade.md)
+para temas, navegação e critérios de validação do frontend.
+
 ```bash
 npm run lint
 npm run test

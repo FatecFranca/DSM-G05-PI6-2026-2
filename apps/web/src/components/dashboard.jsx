@@ -1,24 +1,16 @@
 "use client";
-import Image from "next/image";
+import { serializeCsv } from '@/lib/report-formatters.mjs';
 import Link from 'next/link';
-import { AccountMenu } from '@/components/auth/account-menu';
 import {
   AlertTriangle,
   ArrowDownRight,
   ArrowUpRight,
-  Bell,
   Boxes,
-  ChartNoAxesCombined,
   ChevronRight,
-  CircleGauge,
-  CloudCog,
   Download,
-  Layers3,
-  Menu,
   PackageSearch,
   RefreshCw,
   Search,
-  ShieldCheck,
   Sparkles,
   TrendingUp,
   Warehouse
@@ -26,7 +18,7 @@ import {
 import { useMemo, useState } from "react";
 import {
   Area,
-  AreaChart,
+  ComposedChart,
   CartesianGrid,
   Line,
   ResponsiveContainer,
@@ -35,9 +27,7 @@ import {
   YAxis
 } from "recharts";
 import useSWR from "swr";
-import appIcon from "@/app/icon.png";
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
-import { Avatar, AvatarFallback } from "@/components/ui/avatar";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
@@ -49,7 +39,6 @@ import {
   SelectTrigger,
   SelectValue
 } from "@/components/ui/select";
-import { Separator } from "@/components/ui/separator";
 import { ChartSkeleton, DashboardSkeleton } from '@/components/loading-states';
 import {
   Table,
@@ -61,14 +50,6 @@ import {
 } from "@/components/ui/table";
 import { DashboardApiClient } from "@/services/dashboard-api-client";
 const api = new DashboardApiClient();
-const navigation = [
-  { label: "Vis\xE3o geral", icon: CircleGauge, href: "#conteudo", active: true },
-  { label: "Produtos", icon: PackageSearch, href: "/produtos" },
-  { label: "Estoque", icon: Warehouse, href: "/estoque" },
-  { label: "Previs\xF5es", icon: ChartNoAxesCombined, href: "#previsoes" },
-  { label: "Classifica\xE7\xE3o", icon: Layers3, href: "#classificacao" },
-  { label: "Integra\xE7\xF5es", icon: CloudCog, href: "#integracoes" }
-];
 function formatCurrency(value, currency = "BRL") {
   return new Intl.NumberFormat("pt-BR", {
     style: "currency",
@@ -104,7 +85,7 @@ function ChartTooltip({ active, payload, label }) {
           </span>)}
     </div>;
 }
-function DemandChart({
+export function DemandChart({
   data,
   horizon
 }) {
@@ -113,7 +94,7 @@ function DemandChart({
         <div>
           <div className="title-with-badge">
             <h2>Demanda e previsão</h2>
-            <Badge variant="secondary">Modelo v1</Badge>
+            <Badge variant="secondary">Projeção histórica</Badge>
           </div>
           <p className="muted-copy">Histórico e projeção para {horizon} dias</p>
         </div>
@@ -124,31 +105,31 @@ function DemandChart({
       </div>
       <div className="chart-container" aria-label="Demanda realizada e prevista">
         <ResponsiveContainer width="100%" height="100%">
-          <AreaChart data={data} margin={{ top: 22, right: 10, left: -22 }}>
+          <ComposedChart data={data} margin={{ top: 22, right: 10, left: -22 }}>
             <defs>
               <linearGradient id="forecastArea" x1="0" y1="0" x2="0" y2="1">
                 <stop offset="0%" stopColor="#16a394" stopOpacity={0.18} />
                 <stop offset="100%" stopColor="#16a394" stopOpacity={0.01} />
               </linearGradient>
             </defs>
-            <CartesianGrid stroke="#e7eceb" strokeDasharray="3 3" vertical={false} />
+            <CartesianGrid stroke="var(--border)" strokeDasharray="3 3" vertical={false} />
             <XAxis dataKey="label" axisLine={false} tickLine={false} />
             <YAxis axisLine={false} tickLine={false} />
             <Tooltip content={<ChartTooltip />} />
             <Area dataKey="upper" stroke="none" fill="url(#forecastArea)" connectNulls />
-            <Area dataKey="lower" stroke="none" fill="#fff" fillOpacity={0.75} connectNulls />
-            <Line dataKey="actual" stroke="#263d38" strokeWidth={2.6} connectNulls />
+            <Area dataKey="lower" stroke="none" fill="var(--card)" fillOpacity={0.75} connectNulls />
+            <Line dataKey="actual" stroke="var(--foreground)" strokeWidth={2.6} connectNulls />
             <Line dataKey="forecast" stroke="#0c8d7d" strokeWidth={2.6} strokeDasharray="6 5" connectNulls />
-          </AreaChart>
+          </ComposedChart>
         </ResponsiveContainer>
       </div>
       <div className="chart-note">
         <Sparkles size={15} />
-        <span>Intervalos calculados pelo modelo publicado no PostgreSQL.</span>
+        <span>Estimativas após o fim do histórico. Revise antes de planejar reposições.</span>
       </div>
     </Card>;
 }
-function ClassificationCard({ data }) {
+export function ClassificationCard({ data, showLink = true }) {
   return <Card className="classification-card" id="classificacao">
       <h2>Curva ABC</h2>
       <p className="muted-copy">Participação no catálogo e na receita</p>
@@ -167,9 +148,7 @@ function ClassificationCard({ data }) {
             </div>
           </div>)}
       </div>
-      <Button variant="secondary" className="full-button">
-        Ver matriz ABC × XYZ <ChevronRight size={15} />
-      </Button>
+      {showLink && <Button variant="secondary" className="full-button" asChild><Link href="/inteligencia">Explorar análises <ChevronRight size={15} /></Link></Button>}
     </Card>;
 }
 function RisksTable({
@@ -193,8 +172,8 @@ function RisksTable({
       item.classification,
       item.severity
     ]);
-    const csv = [header, ...values].map((line) => line.map((value) => `"${String(value).replaceAll('"', '""')}"`).join(";")).join("\n");
-    const url = URL.createObjectURL(new Blob([`\uFEFF${csv}`], { type: "text/csv;charset=utf-8" }));
+    const csv = serializeCsv([header, ...values]);
+    const url = URL.createObjectURL(new Blob([csv], { type: "text/csv;charset=utf-8" }));
     const link = document.createElement("a");
     link.href = url;
     link.download = "produtos-em-risco.csv";
@@ -205,7 +184,7 @@ function RisksTable({
       <div className="row-between table-heading">
         <div>
           <h2>Produtos que pedem atenção</h2>
-          <p className="muted-copy">Priorizados por cobertura e demanda prevista</p>
+          <p className="muted-copy">Até 10 prioridades da base · cobertura depende do histórico recente de vendas</p>
         </div>
         <Button variant="outline" onClick={exportCsv} disabled={!rows.length}>
           <Download size={15} />Exportar CSV
@@ -229,7 +208,7 @@ function RisksTable({
                 <TableCell><Badge variant="outline">{product.classification}</Badge></TableCell>
                 <TableCell className="text-right">{product.stock} un.</TableCell>
                 <TableCell className="text-right">{Math.round(product.forecast)} un.</TableCell>
-                <TableCell className="text-right"><strong>{product.coverage} dias</strong></TableCell>
+                <TableCell className="text-right"><strong>{product.coverage === 999 ? 'Sem referência' : `${product.coverage} dias`}</strong></TableCell>
                 <TableCell>
                   <Badge variant={product.risk === "critical" ? "destructive" : "secondary"}>
                     {product.severity}
@@ -241,36 +220,6 @@ function RisksTable({
         {!rows.length && <div className="empty-state"><PackageSearch />Nenhum produto encontrado.</div>}
       </div>
     </Card>;
-}
-function Sidebar({ lastSyncAt, user }) {
-  const syncLabel = lastSyncAt ? new Intl.DateTimeFormat("pt-BR", { dateStyle: "short", timeStyle: "short" }).format(new Date(lastSyncAt)) : "aguardando primeira carga";
-  return <aside className="sidebar">
-      <a href="#conteudo" className="brand">
-        <span className="brand-symbol"><Image src={appIcon} alt="" width={31} height={31} priority /></span>
-        <span><strong>Estoque</strong><small>Inteligente</small></span>
-      </a>
-      <nav aria-label="Navegação principal">
-        <p className="nav-label">GESTÃO</p>
-        {navigation.map((item) => {
-    const Icon = item.icon;
-    return <a key={item.label} href={item.href} className={item.active ? "nav-item nav-item--active" : "nav-item"}>
-              <Icon size={18} /><span>{item.label}</span>
-            </a>;
-  })}
-      </nav>
-      <div className="sidebar-footer">
-        <div className="sync-status" id="integracoes">
-          <span className="sync-dot" />
-          <div><strong>PostgreSQL conectado</strong><small>{syncLabel}</small></div>
-        </div>
-        <Separator />
-        <Link href="/conta" className="profile-row">
-          <Avatar><AvatarFallback>{user.name.slice(0, 2).toUpperCase()}</AvatarFallback></Avatar>
-          <div className="profile-copy"><strong>{user.name}</strong><small>{user.role === 'admin' ? 'Administrador' : 'Consulta'}</small></div>
-          <ChevronRight size={16} />
-        </Link>
-      </div>
-    </aside>;
 }
 function Dashboard({ user }) {
   const [horizon, setHorizon] = useState(7);
@@ -289,22 +238,15 @@ function Dashboard({ user }) {
     { label: "Valor em estoque", value: formatCurrency(summary.kpis.stockValue, summary.kpis.stockValueCurrency), trend: "Simulado", trendLabel: "base UCI em GBP", icon: Warehouse, tone: "teal", direction: "up" },
     { label: "Produtos ativos", value: String(summary.kpis.activeProducts), trend: "Cat\xE1logo", trendLabel: "itens monitorados", icon: Boxes, tone: "blue", direction: "up" },
     { label: "Risco de ruptura", value: String(summary.kpis.stockoutRisk), trend: "Prioridade", trendLabel: "reposi\xE7\xE3o necess\xE1ria", icon: AlertTriangle, tone: "red", direction: "down" },
-    { label: "N\xEDvel de servi\xE7o", value: `${summary.kpis.serviceLevel.toFixed(1)}%`, trend: "30 dias", trendLabel: "sem ruptura registrada", icon: ShieldCheck, tone: "amber", direction: "up" }
+    { label: "Horizonte de análise", value: "7 / 30 / 90", trend: "Dias", trendLabel: "após o fim do histórico", icon: TrendingUp, tone: "teal", direction: "up" }
   ] : [];
-  return <div className="app-shell motion-enter">
-      <Sidebar lastSyncAt={summary?.meta.lastSyncAt ?? null} user={user} />
-      <main className="main-content" id="conteudo">
-        <header className="topbar">
-          <div className="mobile-brand"><Menu size={21} /><Image src={appIcon} alt="" width={25} height={25} priority /><strong>Estoque Inteligente</strong></div>
-          <div className="topbar-actions"><AccountMenu /><Bell size={19} /></div>
-        </header>
-        <div className="content-wrap">
+  return <div className="dashboard-view motion-enter"><main id="conteudo"><div className="content-wrap">
           <section className="page-intro">
-            <div><p className="eyebrow">VISÃO GERAL</p><h1>Decisões de estoque, mais claras.</h1><p className="muted-copy">{summary?.meta.dataset ?? "Dados operacionais e previsões em uma visão única."}{summary?.meta.datasetPeriodEnd ? ` · referência até ${new Intl.DateTimeFormat("pt-BR", { timeZone: "UTC" }).format(new Date(`${summary.meta.datasetPeriodEnd}T00:00:00Z`))}` : ""}</p></div>
+            <div><p className="eyebrow">VISÃO GERAL</p><h1>Olá, {user.name.split(' ')[0]}<span className="brand-period">.</span></h1><p className="muted-copy">{summary?.meta.dataset ?? "Dados operacionais e previsões em uma visão única."}{summary?.meta.datasetPeriodEnd ? ` · referência até ${new Intl.DateTimeFormat("pt-BR", { timeZone: "UTC" }).format(new Date(`${summary.meta.datasetPeriodEnd}T00:00:00Z`))}` : ""}</p></div>
             <div className="page-actions">
-              <div className="search-box"><Search size={16} /><Input value={query} onChange={(event) => setQuery(event.target.value)} placeholder="Buscar produto ou SKU" /></div>
+              <div className="search-box"><Search size={16} /><Input value={query} onChange={(event) => setQuery(event.target.value)} aria-label="Filtrar produtos prioritários" placeholder="Filtrar prioridades por nome ou SKU" /></div>
               <Select value={String(horizon)} onValueChange={(value) => setHorizon(Number(value))}>
-                <SelectTrigger><SelectValue /></SelectTrigger>
+                <SelectTrigger aria-label="Horizonte de previsão"><SelectValue /></SelectTrigger>
                 <SelectContent><SelectItem value="7">Próximos 7 dias</SelectItem><SelectItem value="30">Próximos 30 dias</SelectItem><SelectItem value="90">Próximos 90 dias</SelectItem></SelectContent>
               </Select>
               <Button
@@ -320,14 +262,14 @@ function Dashboard({ user }) {
               </Button>
             </div>
           </section>
-          {error && <Alert variant="destructive"><AlertTriangle /><AlertTitle>API indisponível</AlertTitle><AlertDescription>{error instanceof Error ? error.message : "Falha na consulta."} Confirme se a API está em http://localhost:3333.</AlertDescription></Alert>}
+          <div className="ux-context"><Sparkles size={18} /><span><strong>Análise histórica</strong> · Saldo inicial e custos simulados. Projeções relativas ao fim da base.</span><Link href="/dados">Entenda os dados ↗</Link></div>
+          {error && <Alert variant="destructive"><AlertTriangle /><AlertTitle>Não foi possível atualizar os dados</AlertTitle><AlertDescription>Verifique a conexão e tente novamente pelo botão Atualizar.</AlertDescription></Alert>}
           {loading && !summary ? <DashboardSkeleton /> : summary && <>
               <section className="metrics-grid motion-stagger">{metrics.map((metric) => <MetricCard key={metric.label} metric={metric} />)}</section>
               <section className="analytics-grid">{forecastRequest.isLoading ? <ChartSkeleton /> : <DemandChart data={series} horizon={horizon} />}<ClassificationCard data={summary.classifications} /></section>
               <section className="insight-strip"><span className="insight-icon"><TrendingUp size={19} /></span><div><strong>INSIGHT DO DIA</strong><p>Priorize os itens críticos pela cobertura calculada com a demanda dos últimos 30 dias.</p></div></section>
               <RisksTable products={summary.riskProducts} query={query} />
             </>}
-          <footer className="page-footer"><span>Projeto acadêmico · PI 6º semestre · Grupo 05</span><span>API Node.js + PostgreSQL</span></footer>
         </div>
       </main>
     </div>;

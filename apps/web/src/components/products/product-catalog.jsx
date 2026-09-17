@@ -2,8 +2,7 @@
 
 import Link from 'next/link';
 import { useEffect, useRef, useState } from 'react';
-import { ArrowLeft, Boxes, Download, LoaderCircle, PackageSearch, Plus, Search } from 'lucide-react';
-import { AccountMenu } from '@/components/auth/account-menu';
+import { Boxes, Download, LoaderCircle, PackageSearch, Plus, Search } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Card } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
@@ -135,10 +134,9 @@ export function ProductCatalog({ user }) {
   function refresh() { setLoading(true); setRevision((value) => value + 1); }
   function edit(product) { setEditor(product); setNotice(''); }
   return <main className="mx-auto max-w-6xl space-y-6 px-4 py-6 sm:px-8">
-    <div className="flex items-center justify-between"><Button variant="ghost" asChild><Link href="/"><ArrowLeft className="size-4" />Painel</Link></Button><AccountMenu user={user} /></div>
     <header className="flex flex-wrap items-center justify-between gap-4">
       <div><div className="mb-2 flex items-center gap-2 text-sm text-muted-foreground"><PackageSearch className="size-4" />CATÁLOGO</div>
-        <h1 className="text-3xl font-semibold tracking-tight">Produtos</h1><p className="mt-2 text-muted-foreground">Organize seu catálogo, mesmo sem um ERP conectado.</p></div>
+        <h1 className="text-3xl font-semibold tracking-tight">Seu catálogo, organizado.</h1><p className="mt-2 text-muted-foreground">Encontre produtos, acompanhe preços e importe seu catálogo por CSV.</p></div>
       <div className="flex gap-2"><Button variant="outline" asChild><Link href="/estoque"><Boxes className="size-4" />Estoque</Link></Button>{admin && <Button onClick={() => edit({})}><Plus className="size-4" />Novo produto</Button>}</div>
     </header>
     {!admin && <Alert><AlertDescription>Você tem acesso de consulta. Um administrador pode cadastrar, importar e editar produtos.</AlertDescription></Alert>}

@@ -2,8 +2,7 @@
 
 import Link from 'next/link';
 import { useEffect, useState } from 'react';
-import { ArrowDownToLine, ArrowLeft, ArrowRightLeft, ArrowUpFromLine, Boxes, LoaderCircle, Search, SlidersHorizontal } from 'lucide-react';
-import { AccountMenu } from '@/components/auth/account-menu';
+import { ArrowDownToLine, ArrowRightLeft, ArrowUpFromLine, Boxes, LoaderCircle, Search, SlidersHorizontal } from 'lucide-react';
 import { Alert, AlertDescription } from '@/components/ui/alert';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
@@ -115,7 +114,6 @@ export function StockManagement({ user }) {
   function done(message) { setNotice(message); setLoading(true); setRevision((value) => value + 1); }
   const admin = user.role === 'admin';
   return <main className="mx-auto max-w-7xl space-y-6 px-4 py-6 sm:px-8">
-    <div className="flex items-center justify-between"><Button variant="ghost" asChild><Link href="/"><ArrowLeft className="size-4" />Painel</Link></Button><AccountMenu user={user} /></div>
     <header className="flex flex-wrap items-end justify-between gap-4"><div><div className="mb-2 flex items-center gap-2 text-sm text-muted-foreground"><Boxes className="size-4" />ESTOQUE</div>
       <h1 className="text-3xl font-semibold tracking-tight">Movimentações e saldos</h1><p className="mt-2 text-muted-foreground">Controle manual com depósito simulado para a base pública UCI.</p></div>
       <Button variant="outline" asChild><Link href="/produtos">Gerenciar produtos</Link></Button></header>
@@ -124,7 +122,7 @@ export function StockManagement({ user }) {
     {error && <Alert variant="destructive"><AlertDescription>{error}</AlertDescription></Alert>}
     {admin && options && <section className="grid gap-5 lg:grid-cols-2"><MovementForm options={options} onDone={done} /><TransferForm options={options} onDone={done} /></section>}
     <Card className="gap-0 overflow-hidden"><div className="flex flex-wrap gap-3 border-b p-4"><form className="flex min-w-0 flex-1 gap-2" onSubmit={(event) => { event.preventDefault(); setLoading(true); setSearch(query); }}>
-      <Input aria-label="Buscar saldo por produto" placeholder="Buscar produto ou SKU" value={query} onChange={(event) => setQuery(event.target.value)} maxLength={100} /><Button type="submit" variant="outline"><Search className="size-4" /></Button></form>
+      <Input aria-label="Buscar saldo por produto" placeholder="Buscar produto ou SKU" value={query} onChange={(event) => setQuery(event.target.value)} maxLength={100} /><Button type="submit" variant="outline" aria-label="Buscar saldos"><Search className="size-4" /></Button></form>
       <Select value={warehouseId} onValueChange={(value) => { setLoading(true); setWarehouseId(value); }}><SelectTrigger aria-label="Filtrar depósito"><SelectValue /></SelectTrigger><SelectContent><SelectItem value="all">Todos os depósitos</SelectItem>{options?.warehouses.map((item) => <SelectItem key={item.id} value={item.id}>{item.name}</SelectItem>)}</SelectContent></Select></div>
       <div className="overflow-x-auto">{loading ? <div className="space-y-3 p-5" aria-label="Carregando saldos">{[1, 2, 3, 4].map((item) => <Skeleton key={item} className="h-12 w-full" />)}</div>
         : !levels?.data.length ? <p className="p-10 text-center text-muted-foreground">Nenhum saldo encontrado.</p>
