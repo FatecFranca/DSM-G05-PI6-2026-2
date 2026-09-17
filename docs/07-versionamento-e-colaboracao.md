@@ -34,7 +34,7 @@ Formato: `tipo(escopo): descrição no imperativo`.
 ```text
 feat(api): adiciona consulta de previsão por produto
 test(domain): cobre reentrega de mensagem processada
-fix(bling): renova token antes da expiração
+fix(data): impede duplicidade na carga da UCI
 docs(data): registra critérios da classificação xyz
 chore(ci): executa testes do cliente Flutter
 ```

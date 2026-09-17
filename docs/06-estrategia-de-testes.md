@@ -69,7 +69,7 @@ A API é a fonte do comportamento. Clientes validam apresentação, acessibilida
 ## 6. Dados de teste
 
 - fixtures sintéticas pequenas e legíveis ficam no repositório;
-- nenhum teste utiliza dado pessoal ou token do Bling;
+- nenhum teste utiliza dado pessoal, planilha completa ou segredo de nuvem;
 - relógio e geradores aleatórios são controlados por seed;
 - integração usa banco e broker isolados por execução;
 - snapshots reais, se autorizados, permanecem fora do Git e são anonimizados;

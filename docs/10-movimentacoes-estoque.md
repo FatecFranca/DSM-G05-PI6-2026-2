@@ -26,11 +26,11 @@ Na mesma transação do saldo são persistidos:
 2. a ação em `audit_logs`;
 3. um evento em `outbox_events`.
 
-Os eventos são `stock.entry`, `stock.exit`, `stock.adjustment` e `stock.transferred`. Essa outbox será publicada posteriormente pelo broker de mensageria sem o risco de confirmar o saldo e perder o evento. As duas pernas de uma transferência compartilham o mesmo `transfer_id`.
+Os eventos são `stock.entry`, `stock.exit`, `stock.adjustment` e `stock.transferred`. O worker da outbox os serializa em Protocol Buffers e publica no Google Pub/Sub sem o risco de confirmar o saldo e perder o evento. As duas pernas de uma transferência compartilham o mesmo `transfer_id`.
 
-## Preparo para o Bling
+## Origem e simulação
 
-Movimentações locais recebem `source = manual`; cargas antigas usam `legacy` e o adaptador futuro usará `bling`. O cliente não pode informar IDs externos nem a origem. O adaptador do ERP deverá deduplicar por conta e identificador externo antes de chamar a camada de persistência, mantendo as regras de saldo independentes do fornecedor.
+Movimentações locais recebem `source = manual`; cargas antigas usam `legacy` e o saldo inicial da demonstração usa `dataset`. O cliente não pode informar IDs externos nem a origem. Como a UCI não informa estoque físico, o depósito simulado é sempre identificado na interface e na documentação.
 
 ## API
 

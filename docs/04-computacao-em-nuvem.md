@@ -31,7 +31,7 @@ flowchart LR
     api --> queue{{Pub/Sub}}
     scheduler[Cloud Scheduler] --> queue
     queue --> job[Cloud Run Jobs]
-    job --> bling[Bling]
+    job --> uci[UCI / Cloud Storage]
     job --> sql
     job --> storage[(Cloud Storage)]
     storage --> warehouse[(BigQuery)]
@@ -46,7 +46,7 @@ flowchart LR
 
 - contas de serviço separadas para web, API e job, com menor privilégio;
 - Cloud SQL sem exposição pública direta e conexão autenticada;
-- credenciais do Bling e banco no Secret Manager;
+- credenciais do banco e da mensageria no Secret Manager;
 - TLS em todos os acessos externos;
 - dados pessoais não necessários descartados na ingestão;
 - logs sem tokens, documentos, e-mails ou cargas completas;
@@ -81,7 +81,7 @@ O ambiente acadêmico pode usar Cloud SQL de zona única e escala mínima zero p
 
 ```mermaid
 flowchart LR
-    source[Bling] --> raw[Storage / raw\nJSON imutável]
+    source[UCI Online Retail II] --> raw[Storage / raw\nXLSX imutável + hash]
     raw --> clean[Storage / curated\nParquet particionado]
     clean --> bq[(BigQuery\npartição por data\ncluster por product_id)]
     bq --> ml[Jobs de mineração]
@@ -108,7 +108,7 @@ flowchart LR
 | 6. Corte | congelar escrita local, aplicar delta, trocar configuração e observar | plano de retorno ainda disponível |
 | 7. Estabilização | monitorar erros, custos, latência e integridade; desativar origem após retenção | período sem divergências críticas |
 
-Como a fonte Bling é SaaS, ela não será “migrada”: seu acesso passa a ser feito pelo worker em nuvem. O plano de migração aplica-se ao PostgreSQL, arquivos e rotinas que forem desenvolvidos ou operados localmente.
+A fonte pública é copiada para uma zona bruta imutável no Cloud Storage com hash e versão. O plano de migração aplica-se ao PostgreSQL local, aos artefatos de modelo e às rotinas de carga/treinamento.
 
 ## 7. Disponibilidade, backup e custo
 

@@ -117,7 +117,7 @@ export function StockManagement({ user }) {
   return <main className="mx-auto max-w-7xl space-y-6 px-4 py-6 sm:px-8">
     <div className="flex items-center justify-between"><Button variant="ghost" asChild><Link href="/"><ArrowLeft className="size-4" />Painel</Link></Button><AccountMenu user={user} /></div>
     <header className="flex flex-wrap items-end justify-between gap-4"><div><div className="mb-2 flex items-center gap-2 text-sm text-muted-foreground"><Boxes className="size-4" />ESTOQUE</div>
-      <h1 className="text-3xl font-semibold tracking-tight">Movimentações e saldos</h1><p className="mt-2 text-muted-foreground">Controle manual pronto para receber dados do Bling futuramente.</p></div>
+      <h1 className="text-3xl font-semibold tracking-tight">Movimentações e saldos</h1><p className="mt-2 text-muted-foreground">Controle manual com depósito simulado para a base pública UCI.</p></div>
       <Button variant="outline" asChild><Link href="/produtos">Gerenciar produtos</Link></Button></header>
     {!admin && <Alert><AlertDescription>Seu acesso é somente para consulta. Movimentações exigem papel de administrador.</AlertDescription></Alert>}
     {notice && <Alert role="status"><AlertDescription>{notice}</AlertDescription></Alert>}

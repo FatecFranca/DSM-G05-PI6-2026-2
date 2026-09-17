@@ -7,6 +7,7 @@ it('normaliza SKU e unidade e preserva preço decimal como texto', () => {
   const product = productInputSchema.parse({ sku: ' cafe-01 ', name: ' Café ', unit: ' un ', salePrice: '12.3400' });
   assert.equal(product.sku, 'CAFE-01');
   assert.equal(product.unit, 'UN');
+  assert.equal(product.currency, 'BRL');
   assert.equal(product.salePrice, '12.3400');
 });
 it('rejeita preço negativo, precisão excessiva e campos externos no cadastro', () => {
@@ -15,9 +16,10 @@ it('rejeita preço negativo, precisão excessiva e campos externos no cadastro',
   }
 });
 it('CSV suporta BOM, ponto e vírgula, aspas e vírgula decimal', () => {
-  const rows = new CsvProductSource().read('\uFEFFsku;name;unit;salePrice\nA;"Café; especial";UN;12,50');
+  const rows = new CsvProductSource().read('\uFEFFsku;name;unit;currency;salePrice\nA;"Café; especial";UN;GBP;12,50');
   assert.equal(rows[0]!.name, 'Café; especial');
   assert.equal(rows[0]!.salePrice, '12.50');
+  assert.equal(rows[0]!.currency, 'GBP');
 });
 it('CSV rejeita cabeçalho inválido, SKU duplicado e arquivos vazios', () => {
   for (const csv of ['', 'sku;name;stock\nA;Produto;10', 'sku;name\na;Produto\nA;Outro', 'sku;sku;name\nA;B;Produto']) {

@@ -7,7 +7,7 @@ flowchart LR
     gestor[Gestor de estoque]
     comprador[Comprador]
     analista[Analista / administrador]
-    bling[Sistema Bling]
+    dataset[UCI Online Retail II]
     agenda[Agendador]
 
     subgraph sistema[Estoque Inteligente]
@@ -33,7 +33,7 @@ flowchart LR
     analista --> uc8
     analista --> uc9
     analista --> uc10
-    bling --> uc7
+    dataset --> uc7
     agenda --> uc7
     agenda --> uc9
 ```
@@ -43,7 +43,7 @@ flowchart LR
 ```mermaid
 flowchart TB
     user[Gestor / comprador / analista]
-    bling[Bling]
+    dataset[UCI / objeto versionado]
     scheduler[Cloud Scheduler]
 
     subgraph clients[Clientes]
@@ -77,7 +77,7 @@ flowchart TB
     api -->|comandos| broker
     scheduler -->|sync.requested| broker
     broker --> integration
-    integration -->|leitura incremental| bling
+    integration -->|download com hash| dataset
     integration --> postgres
     integration --> bucket
     integration -->|data.ingested| broker
@@ -138,7 +138,7 @@ sequenceDiagram
     participant S as Agendador
     participant Q as Pub/Sub
     participant W as Pipeline
-    participant B as Bling
+    participant B as UCI / Object Storage
     participant DB as PostgreSQL
     participant ML as Etapa de ML
     participant API as API Node
@@ -146,7 +146,7 @@ sequenceDiagram
     S->>Q: Publica sync.requested.v1
     Q->>W: Entrega comando
     W->>DB: Cria sync_run = running
-    W->>B: Lê páginas alteradas desde o cursor
+    W->>B: Baixa a versão e valida o SHA-256
     B-->>W: Produtos, pedidos, itens e estoques
     W->>W: Valida, normaliza e remove duplicidades
     W->>DB: Upsert transacional + métricas de qualidade
@@ -170,7 +170,7 @@ Em caso de falha, o cursor só avança após a persistência bem-sucedida. Uma n
 | `GET /api/v1/products` | lista filtrável de produtos | implementado com PostgreSQL |
 | `GET /api/v1/forecasts` | série prevista e limites | implementado com PostgreSQL |
 | `GET /api/v1/sync-runs` | histórico de sincronizações | implementado com PostgreSQL |
-| `POST /api/v1/integrations/bling/sync` | solicitar sincronização manual | contrato planejado; exige autorização |
+| `GET /api/v1/datasets/current` | proveniência, licença e qualidade | implementado com PostgreSQL |
 
 Os contratos navegáveis ficam em `/docs`. As rotas usam um repositório
 PostgreSQL injetado nos serviços de aplicação; os testes usam uma implementação
@@ -180,7 +180,7 @@ em memória do mesmo contrato.
 
 - API e clientes permanecem desacoplados para atender web, Flutter mobile e Flutter desktop.
 - O Node.js não executará treinamento pesado no processo da API; jobs de dados usam Python e escalam separadamente.
-- Dados externos entram por uma camada de adaptação, impedindo que formatos do Bling contaminem o domínio.
+- Dados externos entram por uma camada de ingestão isolada, impedindo que o formato XLSX contamine o domínio.
 - Resultados de mineração são persistidos com versão, métricas e período de treinamento.
 - PostgreSQL atende transações; Cloud Storage/BigQuery recebem o volume histórico analítico.
 - Comandos longos retornam rapidamente e são processados por mensagens, sem manter a requisição HTTP aberta.

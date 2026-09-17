@@ -1,2 +1,2 @@
-sku;name;unit;costPrice;salePrice;minimumStock;leadTimeDays;active;description
-EXEMPLO-001;Produto de exemplo;UN;10.00;15.90;5;7;true;Substitua esta linha pelos seus produtos
+sku;name;unit;currency;costPrice;salePrice;minimumStock;leadTimeDays;active;description
+EXEMPLO-001;Produto de exemplo;UN;BRL;10.00;15.90;5;7;true;Substitua esta linha pelos seus produtos

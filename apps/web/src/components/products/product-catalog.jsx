@@ -15,10 +15,10 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@
 import { ProductApiClient } from '@/services/product-api-client';
 
 const api = new ProductApiClient();
-const empty = { sku: '', name: '', description: '', unit: 'UN', costPrice: '0', salePrice: '0', minimumStock: '0', leadTimeDays: 0, active: true };
-const labels = { sku: 'SKU / código', name: 'Nome', unit: 'Unidade', costPrice: 'Custo (R$)', salePrice: 'Preço de venda (R$)', minimumStock: 'Estoque mínimo', leadTimeDays: 'Prazo de reposição (dias)' };
-const sources = { manual: 'Manual', csv: 'CSV', legacy: 'Base inicial', bling: 'Bling' };
-const currency = new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL' });
+const empty = { sku: '', name: '', description: '', unit: 'UN', currency: 'BRL', costPrice: '0', salePrice: '0', minimumStock: '0', leadTimeDays: 0, active: true };
+const labels = { sku: 'SKU / código', name: 'Nome', unit: 'Unidade', costPrice: 'Custo', salePrice: 'Preço de venda', minimumStock: 'Estoque mínimo', leadTimeDays: 'Prazo de reposição (dias)' };
+const sources = { manual: 'Manual', csv: 'CSV', legacy: 'Base inicial', uci_online_retail: 'UCI Online Retail II' };
+const formatCurrency = (value, code) => new Intl.NumberFormat('pt-BR', { style: 'currency', currency: code || 'BRL' }).format(Number(value));
 
 function ProductEditor({ product, onClose, onSaved }) {
   const [form, setForm] = useState(() => Object.fromEntries(Object.keys(empty).map((key) => [key, product?.[key] ?? empty[key]])));
@@ -47,6 +47,11 @@ function ProductEditor({ product, onClose, onSaved }) {
             inputMode={['costPrice', 'salePrice', 'minimumStock'].includes(key) ? 'decimal' : undefined}
             onChange={(event) => setForm({ ...form, [key]: event.target.value })} />
         </label>)}
+        <label className="space-y-2 text-sm font-medium"><span>Moeda</span>
+          <Select value={form.currency} onValueChange={(value) => setForm({ ...form, currency: value })} disabled={busy}>
+            <SelectTrigger className="w-full" aria-label="Moeda"><SelectValue /></SelectTrigger><SelectContent><SelectItem value="BRL">BRL — Real</SelectItem><SelectItem value="GBP">GBP — Libra</SelectItem><SelectItem value="USD">USD — Dólar</SelectItem><SelectItem value="EUR">EUR — Euro</SelectItem></SelectContent>
+          </Select>
+        </label>
         <label className="space-y-2 text-sm font-medium"><span>Situação</span>
           <Select value={String(form.active)} onValueChange={(value) => setForm({ ...form, active: value === 'true' })} disabled={busy}>
             <SelectTrigger className="w-full" aria-label="Situação do produto"><SelectValue /></SelectTrigger>
@@ -155,7 +160,7 @@ export function ProductCatalog({ user }) {
           : !result?.data.length ? <p className="p-10 text-center text-muted-foreground">Nenhum produto encontrado. Ajuste os filtros ou cadastre um produto.</p>
             : <Table><TableHeader><TableRow><TableHead>Produto</TableHead><TableHead>Preço</TableHead><TableHead>Situação</TableHead><TableHead>Origem</TableHead>{admin && <TableHead>Ações</TableHead>}</TableRow></TableHeader>
               <TableBody>{result.data.map((p) => <TableRow key={p.id}><TableCell><div className="max-w-72 whitespace-normal break-words font-medium">{p.name}</div><span className="text-xs text-muted-foreground">{p.sku} · {p.unit}</span></TableCell>
-                <TableCell>{currency.format(Number(p.salePrice))}</TableCell><TableCell><Badge variant={p.active ? 'default' : 'secondary'}>{p.active ? 'Ativo' : 'Inativo'}</Badge></TableCell>
+                <TableCell>{formatCurrency(p.salePrice, p.currency)}</TableCell><TableCell><Badge variant={p.active ? 'default' : 'secondary'}>{p.active ? 'Ativo' : 'Inativo'}</Badge></TableCell>
                 <TableCell>{sources[p.source] || p.source}</TableCell>{admin && <TableCell><Button variant="outline" size="sm" onClick={() => edit(p)} aria-label={`Editar ${p.name}`}>Editar</Button></TableCell>}</TableRow>)}</TableBody></Table>}
       <div className="flex flex-wrap items-center justify-between gap-3 border-t p-4 text-sm">
         <span>{result?.total ?? 0} produtos · Página {page}</span><div className="flex gap-2">

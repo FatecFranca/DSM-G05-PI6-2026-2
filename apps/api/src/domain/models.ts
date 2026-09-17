@@ -36,9 +36,12 @@ export type DashboardSummary = {
     demo: false;
     generatedAt: string;
     lastSyncAt: string | null;
+    dataset: string | null;
+    datasetPeriodEnd: string | null;
   };
   kpis: {
     stockValue: number;
+    stockValueCurrency: string;
     activeProducts: number;
     stockoutRisk: number;
     serviceLevel: number;
@@ -78,3 +81,20 @@ export type SyncRun = {
 };
 
 export type SyncRunList = { data: SyncRun[]; total: number; demo: false };
+
+export type DatasetStatus = {
+  name: string;
+  version: string;
+  status: string;
+  sourceUrl: string;
+  doi: string;
+  license: string;
+  fileSha256: string;
+  recordsRead: number;
+  recordsAccepted: number;
+  recordsRejected: number;
+  periodStartedOn: string | null;
+  periodEndedOn: string | null;
+  importedAt: string | null;
+  qualitySummary: Record<string, unknown>;
+};

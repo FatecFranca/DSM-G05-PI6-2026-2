@@ -12,6 +12,7 @@
     "db:migrate": "tsx src/infrastructure/database/migrate.ts",
     "db:seed": "tsx src/infrastructure/database/seed.ts",
     "user:promote": "tsx src/infrastructure/database/promote-user.ts",
+    "worker:outbox": "tsx src/infrastructure/messaging/outbox-worker.ts",
     "lint": "eslint .",
     "test": "tsx --test test/**/*.test.ts",
     "test:integration": "tsx test/run-integration.ts"
@@ -23,12 +24,14 @@
     "@fastify/rate-limit": "^11.2.0",
     "@fastify/swagger": "9.8.1",
     "@fastify/swagger-ui": "6.1.1",
+    "@google-cloud/pubsub": "^6.1.0",
     "argon2": "^0.45.1",
     "csv-parse": "^7.0.2",
     "dotenv": "^17.4.2",
     "fastify": "5.12.1",
     "nodemailer": "^10.0.3",
     "pg": "^8.23.0",
+    "protobufjs": "^8.8.0",
     "zod": "^4.5.4"
   },
   "devDependencies": {

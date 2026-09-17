@@ -2,7 +2,7 @@
 
 ## 1. Visão do produto
 
-O **Estoque Inteligente** transforma o histórico de produtos, vendas e saldos do Bling em apoio objetivo à reposição. O sistema deverá mostrar a situação atual do estoque, classificar itens por importância e regularidade, agrupar produtos com comportamentos semelhantes e estimar a demanda futura.
+O **Estoque Inteligente** transforma o histórico público de vendas e o estoque operacional mantido pela aplicação em apoio objetivo à reposição. O sistema mostra saldos, classifica itens por importância e regularidade, agrupa produtos com comportamentos semelhantes e estima a demanda futura.
 
 ### Problema
 
@@ -28,14 +28,14 @@ Reduzir rupturas e excesso de estoque por meio de uma visão consolidada e de re
 | Gestor de estoque | Acompanhar indicadores, riscos e produtos prioritários |
 | Comprador | Consultar demanda prevista e sugestão de reposição |
 | Analista/administrador | Acompanhar sincronizações, qualidade dos dados e modelos |
-| Bling | Fornecer produtos, pedidos, itens e posições de estoque |
+| UCI Machine Learning Repository | Fornecer o conjunto histórico versionado de vendas |
 | Agendador em nuvem | Disparar sincronização e processamento diário |
 
 ## 3. Escopo
 
 ### Incluído no MVP
 
-- integração autorizada e incremental com dados do Bling;
+- download verificável e carga idempotente da UCI Online Retail II;
 - catálogo de produtos, categorias, fornecedores e depósitos;
 - consolidação diária de vendas e saldo de estoque;
 - dashboard responsivo com filtros e indicadores;
@@ -51,7 +51,7 @@ Reduzir rupturas e excesso de estoque por meio de uma visão consolidada e de re
 
 ### Fora do MVP
 
-- efetuar pedidos de compra automaticamente no Bling;
+- efetuar pedidos de compra automaticamente em fornecedores ou ERPs;
 - alterar preços ou estoque do sistema de origem;
 - substituir funções contábeis ou fiscais do ERP;
 - prever demanda de produtos sem histórico mínimo usando dados externos;
@@ -63,7 +63,7 @@ Reduzir rupturas e excesso de estoque por meio de uma visão consolidada e de re
 | ID | Requisito | Prioridade | Critério resumido de aceite |
 | --- | --- | --- | --- |
 | RF01 | Permitir autenticação de usuários e controle por perfil | Alta | Usuário não autenticado não acessa dados de negócio |
-| RF02 | Configurar uma integração autorizada com o Bling | Alta | Credencial é validada e armazenada fora do código |
+| RF02 | Baixar e validar a versão oficial da base pública | Alta | URL, licença, versão e SHA-256 ficam registrados |
 | RF03 | Executar carga inicial e sincronização incremental diária | Alta | Reexecução não duplica registros e gera um histórico da carga |
 | RF04 | Consultar produtos, categorias, fornecedores e depósitos | Alta | Busca por nome/SKU e filtros retornam dados paginados |
 | RF05 | Exibir saldo atual, reservado e disponível por produto | Alta | Saldo disponível é calculado e mostra data da última atualização |
@@ -128,7 +128,7 @@ Reduzir rupturas e excesso de estoque por meio de uma visão consolidada e de re
 
 | Item | Tratamento |
 | --- | --- |
-| Acesso ao Bling ainda depende de autorização | Desenvolver primeiro com contrato de dados e amostras anonimizadas |
+| Base pública histórica difere de uma operação atual | Identificar simulações, validar temporalmente e exigir recalibração antes de uso real |
 | Campos e volume reais ainda são desconhecidos | Executar perfil de dados antes de congelar limiares e capacidade |
 | Produtos podem ter pouco histórico | Aplicar regra de histórico mínimo e uma estratégia global/por grupo |
 | Promoções e rupturas distorcem vendas observadas | Registrar eventos e diferenciar venda zero de indisponibilidade quando possível |

@@ -1,10 +1,10 @@
-# Catálogo de produtos e futura integração Bling
+# Catálogo de produtos e carga pública
 
 ## Decisão atual
 
-Enquanto não há uma conta Bling disponível, o catálogo aceita cadastro manual e importação CSV. A API do Bling usa REST, JSON e OAuth 2.0; por isso a aplicação mantém regras de negócio e persistência independentes do provedor. Quando a integração for autorizada, um adaptador `BlingProductSource` poderá produzir o mesmo `ProductInput` usado pelo cadastro e pelo CSV.
+O catálogo aceita cadastro manual, importação CSV e carga da UCI Online Retail II. As regras de negócio e a persistência continuam independentes da fonte; a planilha é tratada apenas pelo job Python de ingestão.
 
-O identificador UUID do produto é interno e permanente. IDs do Bling ou de outros ERPs ficam em `product_external_links`, identificados por provedor e conta. A futura sincronização não deve unir produtos automaticamente apenas pelo SKU, pois um SKU pode ter sido reutilizado ou alterado no sistema de origem.
+O identificador UUID do produto é interno e permanente. Códigos da UCI recebem vínculo estável pelo `external_id` prefixado com a versão da fonte. Uma integração futura com outro sistema deve usar vínculos próprios e não unir produtos automaticamente apenas pelo SKU.
 
 ## Recursos entregues
 
@@ -14,7 +14,7 @@ O identificador UUID do produto é interno e permanente. IDs do Bling ou de outr
 - importação de até 100 novos produtos e 100 KB por CSV, com prévia;
 - transação única: qualquer SKU conflitante desfaz produtos, auditoria e eventos do lote;
 - auditoria e eventos `product.created` / `product.updated` na outbox;
-- origem registrada como `manual`, `csv`, `legacy` ou, futuramente, `bling`.
+- origem registrada como `manual`, `csv`, `legacy` ou `uci_online_retail`.
 
 Saldo não pertence ao cadastro do produto. Quantidade disponível, reservas e movimentações permanecem nas tabelas de estoque e estão documentadas em [Movimentações de estoque](10-movimentacoes-estoque.md).
 
@@ -44,6 +44,6 @@ npm run user:promote -- --email pessoa@example.com
 
 O comando utiliza consultas parametrizadas e não recebe senha. Em produção, essa operação deverá ficar em um fluxo administrativo auditado.
 
-## Próxima integração
+## Extensibilidade
 
-O adaptador do Bling deverá implementar OAuth 2.0, armazenar tokens cifrados em serviço de segredos, respeitar paginação e limites da API, renovar tokens, registrar `sync_runs`, validar cada registro e fazer upsert pelos vínculos de `product_external_links`. Chamadas HTTP externas devem ocorrer fora das transações do PostgreSQL.
+Novas fontes deverão implementar validação, paginação quando aplicável, `sync_runs`, idempotência e upsert por vínculo de origem. Chamadas HTTP externas devem ocorrer fora das transações do PostgreSQL.

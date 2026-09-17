@@ -1,5 +1,9 @@
 # Dependencies and builds
 node_modules/
+.venv/
+__pycache__/
+.pytest_cache/
+*.pyc
 .next/
 dist/
 coverage/
@@ -30,6 +34,7 @@ Thumbs.db
 data/raw/
 data/processed/
 models/
+data/manifests/*.local.json
 *.db
 *.sqlite
 .local/

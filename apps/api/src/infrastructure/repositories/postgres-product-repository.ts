@@ -2,11 +2,11 @@ import type { PoolClient } from 'pg';
 import { ProductError, type CatalogProduct, type CatalogFilter, type ProductInput, type ProductRepository } from '../../domain/product.js';
 import type { PostgresDatabase } from '../database/postgres-database.js';
 
-const columns = `id, sku, name, COALESCE(description,'') AS description, unit, active,
+const columns = `id, sku, name, COALESCE(description,'') AS description, unit, currency, active,
   COALESCE(cost_price,0)::text AS "costPrice", COALESCE(sale_price,0)::text AS "salePrice",
   COALESCE(minimum_stock,0)::text AS "minimumStock", COALESCE(lead_time_days,0) AS "leadTimeDays",
   source, version, updated_at::text AS "updatedAt"`;
-const values = (p: ProductInput) => [p.sku, p.name, p.description, p.unit, p.costPrice, p.salePrice, p.minimumStock, p.leadTimeDays, p.active];
+const values = (p: ProductInput) => [p.sku, p.name, p.description, p.unit, p.currency, p.costPrice, p.salePrice, p.minimumStock, p.leadTimeDays, p.active];
 
 export class PostgresProductRepository implements ProductRepository {
   constructor(private readonly db: PostgresDatabase) {}
@@ -37,8 +37,8 @@ export class PostgresProductRepository implements ProductRepository {
         const created: CatalogProduct[] = [];
         for (const p of [...products].sort((a, b) => a.sku.localeCompare(b.sku))) {
           const result = await client.query<CatalogProduct>(`INSERT INTO products
-            (sku,name,description,unit,cost_price,sale_price,minimum_stock,lead_time_days,active,source)
-            VALUES($1,$2,$3,$4,$5,$6,$7,$8,$9,$10) RETURNING ${columns}`, [...values(p), source]);
+            (sku,name,description,unit,currency,cost_price,sale_price,minimum_stock,lead_time_days,active,source)
+            VALUES($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11) RETURNING ${columns}`, [...values(p), source]);
           const product = result.rows[0]!;
           await this.event(client, product, actorId, 'product.created');
           created.push(product);
@@ -50,9 +50,9 @@ export class PostgresProductRepository implements ProductRepository {
   async update(id: string, version: number, input: ProductInput, actorId: string) {
     try {
       return await this.db.transaction(async (client) => {
-        const result = await client.query<CatalogProduct>(`UPDATE products SET sku=$1,name=$2,description=$3,unit=$4,
-          cost_price=$5,sale_price=$6,minimum_stock=$7,lead_time_days=$8,active=$9,version=version+1,updated_at=now()
-          WHERE id=$10 AND version=$11 RETURNING ${columns}`, [...values(input), id, version]);
+        const result = await client.query<CatalogProduct>(`UPDATE products SET sku=$1,name=$2,description=$3,unit=$4,currency=$5,
+          cost_price=$6,sale_price=$7,minimum_stock=$8,lead_time_days=$9,active=$10,version=version+1,updated_at=now()
+          WHERE id=$11 AND version=$12 RETURNING ${columns}`, [...values(input), id, version]);
         const product = result.rows[0];
         if (!product) {
           const exists = await client.query('SELECT 1 FROM products WHERE id=$1', [id]);

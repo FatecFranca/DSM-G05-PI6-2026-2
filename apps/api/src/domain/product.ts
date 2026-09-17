@@ -7,6 +7,7 @@ export const productInputSchema = z.object({
   name: z.string().trim().min(2).max(200),
   description: z.string().trim().max(2000).default(''),
   unit: z.string().trim().toUpperCase().regex(/^[A-Z0-9]{1,6}$/).default('UN'),
+  currency: z.string().trim().toUpperCase().regex(/^[A-Z]{3}$/).default('BRL'),
   costPrice: decimal.default('0'),
   salePrice: decimal.default('0'),
   minimumStock: decimal.default('0'),

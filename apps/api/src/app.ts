@@ -91,6 +91,7 @@ export async function buildApp(options: BuildAppOptions = {}) {
         { name: 'Inventory', description: 'Saldos e movimentações de estoque' },
         { name: 'Forecasts', description: 'Previsões de demanda' },
         { name: 'Integrations', description: 'Sincronizações externas' },
+        { name: 'Data', description: 'Proveniência e qualidade dos dados' },
       ],
     },
   });

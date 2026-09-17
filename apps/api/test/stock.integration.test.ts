@@ -18,7 +18,7 @@ describe('Movimentações com PostgreSQL real', { skip: process.env.AUTH_INTEGRA
     await owner.query(`CREATE SCHEMA "${schema}"`); created = true;
     const url = new URL(config.databaseUrl); url.searchParams.set('options', `-c search_path=${schema}`);
     db = new PostgresDatabase(url.toString(), 6);
-    for (const file of ['schema.sql', 'migrations/002_authentication.sql', 'migrations/003_product_catalog.sql', 'migrations/004_stock_movements.sql', 'migrations/005_warehouse_catalog.sql']) {
+    for (const file of ['schema.sql', 'migrations/002_authentication.sql', 'migrations/003_product_catalog.sql', 'migrations/004_stock_movements.sql', 'migrations/005_warehouse_catalog.sql', 'migrations/006_public_dataset.sql']) {
       const sql = await readFile(new URL(`../../../infra/database/${file}`, import.meta.url), 'utf8');
       await db.query(sql.replace('CREATE EXTENSION IF NOT EXISTS pgcrypto;', ''));
     }
