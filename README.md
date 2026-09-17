@@ -44,6 +44,9 @@ Os clientes estão separados da API para que Web, Mobile e Desktop compartilhem 
 
 ## Executar localmente
 
+Para preparar uma máquina do zero, siga o guia completo de
+[primeira execução](docs/11-primeira-execucao.md).
+
 Pré-requisitos: Node.js 22 ou superior, npm 10 ou superior, Python 3.12, PostgreSQL 18 e Flutter 3.41 ou superior.
 
 ```bash
