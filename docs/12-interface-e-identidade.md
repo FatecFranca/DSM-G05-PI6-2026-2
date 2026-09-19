@@ -4,8 +4,8 @@
 
 Interface web em Next.js/JavaScript com componentes shadcn/Radix e Recharts.
 As páginas autenticadas compartilham navegação, temas e menu da conta. O
-layout responsivo atende navegadores em celulares; esta entrega não altera
-o aplicativo nativo Flutter nem o executável desktop.
+layout responsivo atende navegadores em celulares. A adaptação nativa Flutter
+está descrita em [Interface Mobile/Desktop](13-interface-flutter.md).
 
 ## Identidade
 
@@ -15,12 +15,12 @@ com foco em legibilidade de tabelas e valores numéricos.
 
 | Token | Claro | Escuro |
 | --- | --- | --- |
-| Fundo | `#F4F6F5` | `#101B18` |
-| Superfície | `#FFFFFF` | `#172620` |
-| Texto | `#203B34` | `#E2EDE7` |
-| Destaque | `#087967` | `#6BD5B4` |
-| Texto secundário | `#63766E` | `#A0B4A8` |
-| Borda | `#DFE7E2` | `#304238` |
+| Fundo | `#F6F7FB` | `#0C1220` |
+| Superfície | `#FFFFFF` | `#131D2E` |
+| Texto | `#172033` | `#EDF2FA` |
+| Destaque | `#3157D5` | `#8BA8FF` |
+| Texto secundário | `#667085` | `#A4AFC2` |
+| Borda | `#E1E6EF` | `#29364B` |
 
 Tokens e estilos compartilhados: `apps/web/src/app/workspace.css`.
 Tema claro, escuro ou do sistema, persistido localmente como `estoque-theme`.

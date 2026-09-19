@@ -13,7 +13,13 @@ import type {
 } from '../../domain/models.js';
 import type { PostgresDatabase } from '../database/postgres-database.js';
 
-const classificationColors = { A: '#0c7767', B: '#d69e2e', C: '#7c8a96' } as const;
+const classificationColors = { A: '#3157d5', B: '#c18b28', C: '#8b98ad' } as const;
+
+// Select one run per active dataset: keeping older models must not multiply demand.
+const latestForecastRun = `SELECT candidate.id FROM model_runs candidate
+  WHERE candidate.task = 'forecast' AND candidate.status = 'succeeded'
+    AND candidate.dataset_version_id = mr.dataset_version_id
+  ORDER BY candidate.finished_at DESC NULLS LAST, candidate.created_at DESC, candidate.id DESC LIMIT 1`;
 
 function asNumber(value: string | number | null): number {
   return value === null ? 0 : Number(value);
@@ -73,6 +79,7 @@ const productProjection = `
     JOIN model_runs mr ON mr.id = df.model_run_id AND mr.status = 'succeeded'
     JOIN anchor a ON a.id = mr.dataset_version_id
     WHERE df.horizon_days = 30
+      AND mr.id = (${latestForecastRun})
       AND df.target_date BETWEEN a.day + 1 AND a.day + 30
     GROUP BY df.product_id
   ), projected AS (
@@ -145,6 +152,7 @@ export class PostgresInventoryRepository implements InventoryRepository {
           JOIN model_runs mr ON mr.id = df.model_run_id AND mr.status = 'succeeded'
           JOIN anchor a ON a.id=mr.dataset_version_id
           WHERE horizon_days = 7 AND target_date BETWEEN a.day + 1 AND a.day + 7
+            AND mr.id = (${latestForecastRun})
           GROUP BY target_date
         )
         SELECT calendar.day::text, actual.quantity AS actual, predicted.quantity AS forecast,
@@ -278,6 +286,7 @@ export class PostgresInventoryRepository implements InventoryRepository {
         JOIN model_runs mr ON mr.id = df.model_run_id AND mr.status = 'succeeded'
         JOIN anchor a ON a.id=mr.dataset_version_id
         WHERE df.horizon_days = $2
+          AND mr.id = (${latestForecastRun})
           AND df.target_date BETWEEN a.day + 1 AND a.day + $2
           AND ($1::uuid IS NULL OR df.product_id = $1)
         GROUP BY target_date
@@ -293,7 +302,9 @@ export class PostgresInventoryRepository implements InventoryRepository {
     const model = await this.database.query<{ model_version: string; finished_at: Date | null }>(`
       SELECT model_version, finished_at FROM model_runs
       WHERE task = 'forecast' AND status = 'succeeded'
-      ORDER BY finished_at DESC NULLS LAST, created_at DESC LIMIT 1`);
+        AND dataset_version_id = (SELECT id FROM dataset_versions WHERE status = 'ready'
+          ORDER BY imported_at DESC NULLS LAST LIMIT 1)
+      ORDER BY finished_at DESC NULLS LAST, created_at DESC, id DESC LIMIT 1`);
 
     return {
       demo: false,

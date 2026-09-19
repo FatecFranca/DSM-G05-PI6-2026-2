@@ -11,6 +11,24 @@ enum StockRisk {
   }
 }
 
+class DatasetInfo {
+  const DatasetInfo({
+    required this.license,
+    required this.version,
+    required this.fingerprint,
+    required this.recordsRead,
+    required this.recordsAccepted,
+    required this.recordsRejected,
+    required this.quality,
+    this.startedOn,
+    this.endedOn,
+  });
+  final String license, version, fingerprint;
+  final int recordsRead, recordsAccepted, recordsRejected;
+  final Map<String, int> quality;
+  final DateTime? startedOn, endedOn;
+}
+
 class DashboardSummary {
   const DashboardSummary({
     required this.meta,
@@ -28,10 +46,15 @@ class DashboardSummary {
 }
 
 class DashboardMeta {
-  const DashboardMeta({required this.source, required this.lastSyncAt});
+  const DashboardMeta({
+    required this.source,
+    required this.lastSyncAt,
+    this.datasetPeriodEnd,
+  });
 
   final String source;
   final DateTime? lastSyncAt;
+  final DateTime? datasetPeriodEnd;
 }
 
 class DashboardKpis {
@@ -40,9 +63,11 @@ class DashboardKpis {
     required this.activeProducts,
     required this.stockoutRisk,
     required this.serviceLevel,
+    this.stockValueCurrency = 'GBP',
   });
 
   final double stockValue;
+  final String stockValueCurrency;
   final int activeProducts;
   final int stockoutRisk;
   final double serviceLevel;

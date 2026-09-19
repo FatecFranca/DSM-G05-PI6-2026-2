@@ -6,6 +6,7 @@ import type { FastifyInstance } from 'fastify';
 import { buildApp } from '../src/app.js';
 import { getConfig } from '../src/config.js';
 import { PostgresDatabase } from '../src/infrastructure/database/postgres-database.js';
+import { PostgresInventoryRepository } from '../src/infrastructure/repositories/postgres-inventory-repository.js';
 
 describe('Movimentações com PostgreSQL real', { skip: process.env.AUTH_INTEGRATION !== '1' }, () => {
   const schema = `stock_test_${randomUUID().replaceAll('-', '')}`;
@@ -37,6 +38,30 @@ describe('Movimentações com PostgreSQL real', { skip: process.env.AUTH_INTEGRA
   after(async () => {
     await app?.close(); await db?.close();
     if (created) await owner.query(`DROP SCHEMA "${schema}" CASCADE`); await owner?.close();
+  });
+
+  it('não soma previsões de versões antigas do modelo', async () => {
+    const dataset = await db.query<{ id: string }>(`INSERT INTO dataset_versions
+      (slug,version,source_url,doi,license,file_sha256,status,period_started_on,period_ended_on,imported_at)
+      VALUES ('test','v1','https://example.com','test','test',repeat('a',64),'ready','2011-01-01','2011-12-09',now()) RETURNING id`);
+    for (const [version, quantity, finished] of [['old', 100, '2026-01-01'], ['new', 12, '2026-02-01']] as const) {
+      const run = await db.query<{ id: string }>(`INSERT INTO model_runs
+        (task,algorithm,model_version,status,finished_at,dataset_version_id)
+        VALUES ('forecast','test',$1,'succeeded',$2,$3) RETURNING id`, [version, finished, dataset.rows[0]!.id]);
+      for (const horizon of [7, 30, 90]) {
+        await db.query(`INSERT INTO demand_forecasts
+          (product_id,model_run_id,generated_at,target_date,horizon_days,predicted_quantity)
+          VALUES ($1,$2,now(),'2011-12-10',$3,$4)`, [productId, run.rows[0]!.id, horizon, quantity]);
+      }
+    }
+    const repository = new PostgresInventoryRepository(db);
+    for (const horizon of [7, 30, 90] as const) {
+      const forecast = await repository.getForecast(horizon, productId);
+      assert.equal(forecast.model, 'new');
+      assert.equal(forecast.data.find((point) => point.date === '2011-12-10')?.forecast, 12);
+    }
+    assert.equal((await repository.listProducts({})).data.find((product) => product.id === productId)?.forecast, 12);
+    assert.equal((await repository.getDashboardSummary()).demandSeries.find((point) => point.date === '2011-12-10')?.forecast, 12);
   });
 
   it('protege leitura por sessão e escrita por papel e CSRF', async () => {

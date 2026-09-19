@@ -221,6 +221,9 @@ chave SMTP no Git, em prints ou na documentação.
 
 ## 8. Executar Mobile e Desktop
 
+Consulte também [Interface Flutter](13-interface-flutter.md) para temas,
+validação visual, APK de desenvolvimento e conexão por USB.
+
 Com a API funcionando:
 
 ```powershell

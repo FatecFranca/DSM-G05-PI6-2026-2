@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import argparse
 import json
 from dataclasses import dataclass
 from datetime import date, timedelta
@@ -10,12 +11,13 @@ import numpy as np
 import pandas as pd
 import psycopg
 from sklearn.cluster import KMeans
-from sklearn.ensemble import HistGradientBoostingRegressor, RandomForestClassifier
-from sklearn.metrics import accuracy_score, f1_score, mean_absolute_error, precision_score, recall_score, silhouette_score
+from sklearn.ensemble import RandomForestClassifier
+from sklearn.metrics import accuracy_score, f1_score, precision_score, recall_score, silhouette_score
 from sklearn.model_selection import train_test_split
 from sklearn.preprocessing import StandardScaler
 
 from .settings import DATASET_SLUG, MODEL_DIRECTORY, database_url
+from .forecasting import train_recursive_forecaster
 
 RANDOM_STATE = 42
 FORECAST_DAYS = 90
@@ -116,33 +118,49 @@ def train_clustering(features: pd.DataFrame) -> tuple[KMeans, StandardScaler, di
     return best[1], scaler, {"silhouette": round(best[0], 6), "candidates": candidates, "clusters": best[1].n_clusters}
 
 
-def train_classifier(demand: pd.DataFrame, features: pd.DataFrame, started_on: date, ended_on: date) -> tuple[RandomForestClassifier, dict[str, object], pd.Series]:
-    split_date = pd.Timestamp(started_on + (ended_on - started_on) * 2 / 3)
-    past = demand[demand["demand_date"] <= split_date].groupby("product_id").agg(
-        past_units=("units_sold", "sum"), past_revenue=("gross_revenue", "sum"), past_active_days=("demand_date", "nunique")
-    )
-    future = demand[demand["demand_date"] > split_date].groupby("product_id")["units_sold"].sum().rename("future_units")
-    frame = features.set_index("product_id").join(past).join(future).fillna(0)
-    threshold = float(frame["future_units"].median())
-    frame["target"] = (frame["future_units"] > threshold).astype(int)
-    columns = ["past_units", "past_revenue", "past_active_days", "daily_mean", "cv", "zero_ratio", "average_price"]
-    x_train, x_test, y_train, y_test = train_test_split(
-        frame[columns], frame["target"], test_size=0.25, random_state=RANDOM_STATE, stratify=frame["target"]
-    )
-    model = RandomForestClassifier(n_estimators=250, min_samples_leaf=3, class_weight="balanced", random_state=RANDOM_STATE, n_jobs=-1)
-    model.fit(x_train, y_train)
-    prediction = model.predict(x_test)
-    probabilities = pd.Series(model.predict_proba(frame[columns])[:, 1], index=frame.index)
+CLASSIFIER_FEATURES = ["daily_mean", "cv", "zero_ratio", "average_price"]
+
+
+def classifier_features_at(demand: pd.DataFrame, started_on: date, cutoff: date) -> pd.DataFrame:
+    past = demand[demand["demand_date"] <= pd.Timestamp(cutoff)]
+    return product_features(past, (cutoff - started_on).days + 1).set_index("product_id")
+
+
+def train_classifier(demand: pd.DataFrame, features: pd.DataFrame, started_on: date, ended_on: date):
+    cutoff = started_on + (ended_on - started_on) * 2 / 3
+    past_features = classifier_features_at(demand, started_on, cutoff)
+    if len(past_features) < 8:
+        raise ValueError("A classificação requer pelo menos oito produtos com histórico anterior ao corte.")
+    future_days = max((ended_on - cutoff).days, 1)
+    future = demand[demand["demand_date"] > pd.Timestamp(cutoff)].groupby("product_id").units_sold.sum()
+    frame = past_features.join((future / future_days).rename("future_daily_mean")).fillna(0)
+    train_ids, test_ids = train_test_split(frame.index, test_size=.25, random_state=RANDOM_STATE)
+    # The label threshold is derived from training products' PAST, not test labels.
+    threshold = float(frame.loc[train_ids, "daily_mean"].median())
+    target = (frame.future_daily_mean > threshold).astype(int)
+    model = RandomForestClassifier(n_estimators=250, min_samples_leaf=3,
+        class_weight="balanced", random_state=RANDOM_STATE, n_jobs=-1)
+    model.fit(frame.loc[train_ids, CLASSIFIER_FEATURES], target.loc[train_ids])
+    prediction = model.predict(frame.loc[test_ids, CLASSIFIER_FEATURES])
     metrics = {
-        "accuracy": round(float(accuracy_score(y_test, prediction)), 6),
-        "precision": round(float(precision_score(y_test, prediction, zero_division=0)), 6),
-        "recall": round(float(recall_score(y_test, prediction, zero_division=0)), 6),
-        "f1": round(float(f1_score(y_test, prediction, zero_division=0)), 6),
-        "future_high_demand_threshold": threshold,
-        "temporal_feature_cutoff": split_date.date().isoformat(),
-        "test_products": int(len(y_test)),
+        "accuracy": round(float(accuracy_score(target.loc[test_ids], prediction)), 6),
+        "precision": round(float(precision_score(target.loc[test_ids], prediction, zero_division=0)), 6),
+        "recall": round(float(recall_score(target.loc[test_ids], prediction, zero_division=0)), 6),
+        "f1": round(float(f1_score(target.loc[test_ids], prediction, zero_division=0)), 6),
+        "high_demand_daily_threshold": threshold,
+        "temporal_feature_cutoff": cutoff.isoformat(),
+        "validation_protocol": "held-out-products-with-past-only-features",
+        "test_products": int(len(test_ids)),
+        "not_a_temporal_forecast_accuracy": True,
     }
-    return model, metrics, probabilities
+    model.fit(frame[CLASSIFIER_FEATURES], target)
+    current = features.set_index("product_id")[CLASSIFIER_FEATURES]
+    probabilities = model.predict_proba(current)
+    positive = list(model.classes_).index(1) if 1 in model.classes_ else None
+    values = probabilities[:, positive] if positive is not None else np.zeros(len(current))
+    artifact = {"schema_version": 2, "model": model, "features": CLASSIFIER_FEATURES,
+                "high_demand_daily_threshold": threshold, "feature_cutoff": cutoff.isoformat()}
+    return artifact, metrics, pd.Series(values, index=current.index)
 
 
 def make_forecast_frame(demand: pd.DataFrame, product_ids: list[str], started_on: date, ended_on: date) -> pd.DataFrame:
@@ -161,55 +179,9 @@ def make_forecast_frame(demand: pd.DataFrame, product_ids: list[str], started_on
     return frame.dropna().reset_index(drop=True)
 
 
-def train_forecaster(demand: pd.DataFrame, started_on: date, ended_on: date) -> tuple[HistGradientBoostingRegressor, dict[str, object], dict[str, list[float]]]:
-    top_ids = demand.groupby("product_id")["units_sold"].sum().nlargest(TOP_PRODUCTS_FOR_AI).index.tolist()
-    frame = make_forecast_frame(demand, top_ids, started_on, ended_on)
-    columns = ["product_code", "day_of_week", "month", "lag_1", "lag_7", "lag_14", "rolling_7", "rolling_28"]
-    cutoff = pd.Timestamp(ended_on - timedelta(days=30))
-    train = frame[frame["demand_date"] <= cutoff]
-    test = frame[frame["demand_date"] > cutoff]
-    model = HistGradientBoostingRegressor(loss="poisson", max_iter=180, max_leaf_nodes=31, learning_rate=0.08, l2_regularization=0.1, random_state=RANDOM_STATE)
-    model.fit(train[columns], train["units_sold"])
-    prediction = np.maximum(model.predict(test[columns]), 0)
-    actual = test["units_sold"].to_numpy()
-    baseline = test["lag_7"].to_numpy()
-    denominator = max(float(actual.sum()), 1.0)
-    metrics = {
-        "mae": round(float(mean_absolute_error(actual, prediction)), 6),
-        "wape": round(float(np.abs(actual - prediction).sum() / denominator), 6),
-        "seasonal_naive_wape": round(float(np.abs(actual - baseline).sum() / denominator), 6),
-        "validation_started_on": (cutoff + pd.Timedelta(days=1)).date().isoformat(),
-        "validation_days": 30,
-        "ai_products": len(top_ids),
-        "training_rows": int(len(train)),
-    }
-    history: dict[str, list[float]] = {}
-    raw = demand.groupby(["product_id", "demand_date"])["units_sold"].sum()
-    for product_id in demand["product_id"].unique():
-        values = raw.get(product_id, pd.Series(dtype=float))
-        if isinstance(values, pd.Series):
-            daily = values.reindex(pd.date_range(started_on, ended_on), fill_value=0).astype(float).tolist()
-        else:
-            daily = [0.0] * ((ended_on - started_on).days + 1)
-        history[product_id] = daily
-    top_index = {product_id: position for position, product_id in enumerate(top_ids)}
-    future: dict[str, list[float]] = {product_id: [] for product_id in history}
-    for offset in range(1, FORECAST_DAYS + 1):
-        target = ended_on + timedelta(days=offset)
-        for product_id, values in history.items():
-            if product_id in top_index:
-                row = pd.DataFrame([{
-                    "product_code": top_index[product_id], "day_of_week": target.weekday(), "month": target.month,
-                    "lag_1": values[-1], "lag_7": values[-7], "lag_14": values[-14],
-                    "rolling_7": float(np.mean(values[-7:])), "rolling_28": float(np.mean(values[-28:])),
-                }])
-                predicted = max(float(model.predict(row[columns])[0]), 0.0)
-            else:
-                same_weekdays = [values[-7 * lag] for lag in range(1, 13) if len(values) >= 7 * lag]
-                predicted = max(float(np.mean(same_weekdays)) if same_weekdays else 0.0, 0.0)
-            values.append(predicted)
-            future[product_id].append(predicted)
-    return model, metrics, future
+def train_forecaster(demand: pd.DataFrame, started_on: date, ended_on: date):
+    return train_recursive_forecaster(demand, started_on, ended_on, make_forecast_frame,
+                                     top_products=TOP_PRODUCTS_FOR_AI, days=FORECAST_DAYS)
 
 
 def upsert_run(connection: psycopg.Connection, dataset: DatasetVersion, task: str, algorithm: str,
@@ -233,12 +205,12 @@ def persist_results(connection: psycopg.Connection, dataset: DatasetVersion, fea
                     classification_metrics: dict[str, object], forecast_metrics: dict[str, object],
                     forecasts: dict[str, list[float]]) -> None:
     suffix = dataset.version.replace("_", "-")
-    cluster_run = upsert_run(connection, dataset, "clustering", "kmeans", f"kmeans-{suffix}-v1",
+    cluster_run = upsert_run(connection, dataset, "clustering", "kmeans", f"kmeans-{suffix}-v2",
                              {"random_state": RANDOM_STATE, "scaled": True}, clustering_metrics, artifacts["clustering"])
-    upsert_run(connection, dataset, "classification", "random-forest", f"high-demand-{suffix}-v1",
+    upsert_run(connection, dataset, "classification", "random-forest", f"high-demand-{suffix}-v2",
                {"random_state": RANDOM_STATE, "estimators": 250}, classification_metrics, artifacts["classification"])
-    forecast_run = upsert_run(connection, dataset, "forecast", "hist-gradient-boosting", f"demand-{suffix}-v1",
-                              {"random_state": RANDOM_STATE, "horizons": [7, 30, 90], "fallback": "weekday-mean"},
+    forecast_run = upsert_run(connection, dataset, "forecast", str(forecast_metrics["selected_strategy"]), f"demand-{suffix}-v2",
+                              {"random_state": RANDOM_STATE, "horizons": [7, 30, 90], "fallback": "seasonal-naive", "validation": "fixed-origin-recursive", "bounds": "heuristic-not-calibrated"},
                               forecast_metrics, artifacts["forecast"])
     connection.execute("DELETE FROM product_analyses WHERE model_run_id=%s", (cluster_run,))
     analysis_rows = []
@@ -271,8 +243,14 @@ def persist_results(connection: psycopg.Connection, dataset: DatasetVersion, fea
 
 
 def main() -> None:
-    MODEL_DIRECTORY.mkdir(parents=True, exist_ok=True)
-    with psycopg.connect(database_url()) as connection:
+    parser = argparse.ArgumentParser(description="Treina modelos sobre o histórico identificado da base.")
+    parser.add_argument("--evaluate-only", action="store_true", help="Grava artefatos e métricas, sem publicar no banco.")
+    args = parser.parse_args()
+    artifact_directory = MODEL_DIRECTORY / ("evaluation-v2" if args.evaluate_only else "v2")
+    artifact_directory.mkdir(parents=True, exist_ok=True)
+    with psycopg.connect(database_url(), connect_timeout=10) as connection:
+        if args.evaluate_only:
+            connection.execute("SET TRANSACTION READ ONLY")
         dataset, demand = load_dataset(connection)
         days = (dataset.ended_on - dataset.started_on).days + 1
         features = product_features(demand, days)
@@ -285,18 +263,22 @@ def main() -> None:
         print("Treinando previsão e validando contra baseline sazonal...")
         forecaster, forecast_metrics, forecasts = train_forecaster(demand, dataset.started_on, dataset.ended_on)
         artifacts = {
-            "clustering": MODEL_DIRECTORY / "clustering.joblib",
-            "classification": MODEL_DIRECTORY / "classification.joblib",
-            "forecast": MODEL_DIRECTORY / "forecast.joblib",
+            "clustering": artifact_directory / "clustering.joblib",
+            "classification": artifact_directory / "classification.joblib",
+            "forecast": artifact_directory / "forecast.joblib",
         }
         joblib.dump({"model": clustering, "scaler": scaler}, artifacts["clustering"])
         joblib.dump(classifier, artifacts["classification"])
         joblib.dump(forecaster, artifacts["forecast"])
-        with connection.transaction():
-            persist_results(connection, dataset, features, probabilities, artifacts, clustering_metrics,
-                            classification_metrics, forecast_metrics, forecasts)
-        print(json.dumps({"clustering": clustering_metrics, "classification": classification_metrics,
-                          "forecast": forecast_metrics}, ensure_ascii=False, indent=2))
+        if not args.evaluate_only:
+            with connection.transaction():
+                persist_results(connection, dataset, features, probabilities, artifacts, clustering_metrics,
+                                classification_metrics, forecast_metrics, forecasts)
+        report = {"dataset_version": dataset.version, "period_end": dataset.ended_on.isoformat(),
+                  "published": not args.evaluate_only, "clustering": clustering_metrics,
+                  "classification": classification_metrics, "forecast": forecast_metrics}
+        (artifact_directory / "metrics.json").write_text(json_value(report), encoding="utf-8")
+        print(json.dumps(report, ensure_ascii=False, indent=2))
 
 
 if __name__ == "__main__":

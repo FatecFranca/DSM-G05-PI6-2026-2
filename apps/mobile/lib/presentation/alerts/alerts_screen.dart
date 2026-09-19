@@ -16,7 +16,7 @@ class AlertsScreen extends StatefulWidget {
 }
 
 class _AlertsScreenState extends State<AlertsScreen> {
-  List<ProductSummary> _products = const [];
+  List<ProductSummary> _products = [];
   String? _error;
   var _loading = true;
 
@@ -54,7 +54,7 @@ class _AlertsScreenState extends State<AlertsScreen> {
   @override
   Widget build(BuildContext context) {
     if (_loading && _products.isEmpty) {
-      return const LoadingView(label: 'Consultando alertas...');
+      return LoadingView(label: 'Consultando alertas...');
     }
     if (_error != null && _products.isEmpty) {
       return ErrorView(message: _error!, onRetry: _loadAlerts);
@@ -73,7 +73,7 @@ class _AlertsScreenState extends State<AlertsScreen> {
         builder: (context, constraints) {
           final padding = constraints.maxWidth >= 900 ? 30.0 : 16.0;
           return ListView(
-            physics: const AlwaysScrollableScrollPhysics(),
+            physics: AlwaysScrollableScrollPhysics(),
             padding: EdgeInsets.fromLTRB(padding, 24, padding, 32),
             children: [
               Text(
@@ -83,12 +83,14 @@ class _AlertsScreenState extends State<AlertsScreen> {
                   letterSpacing: -0.6,
                 ),
               ),
-              const SizedBox(height: 5),
-              const Text(
+              SizedBox(height: 5),
+              Text(
                 'Riscos de ruptura ordenados por prioridade operacional.',
-                style: TextStyle(color: AppColors.muted),
+                style: TextStyle(
+                  color: Theme.of(context).colorScheme.onSurfaceVariant,
+                ),
               ),
-              const SizedBox(height: 18),
+              SizedBox(height: 18),
               Wrap(
                 spacing: 12,
                 runSpacing: 12,
@@ -97,7 +99,7 @@ class _AlertsScreenState extends State<AlertsScreen> {
                     label: 'Críticos',
                     value: critical,
                     icon: Icons.error_outline_rounded,
-                    color: AppColors.danger,
+                    color: Theme.of(context).colorScheme.error,
                   ),
                   _AlertSummary(
                     label: 'Em atenção',
@@ -108,12 +110,12 @@ class _AlertsScreenState extends State<AlertsScreen> {
                 ],
               ),
               if (_loading) ...[
-                const SizedBox(height: 14),
-                const LinearProgressIndicator(minHeight: 2),
+                SizedBox(height: 14),
+                LinearProgressIndicator(minHeight: 2),
               ],
-              const SizedBox(height: 20),
+              SizedBox(height: 20),
               if (_products.isEmpty)
-                const SizedBox(
+                SizedBox(
                   height: 280,
                   child: EmptyView(
                     icon: Icons.notifications_none_rounded,
@@ -124,7 +126,7 @@ class _AlertsScreenState extends State<AlertsScreen> {
               else
                 ..._products.map(
                   (product) => Padding(
-                    padding: const EdgeInsets.only(bottom: 10),
+                    padding: EdgeInsets.only(bottom: 10),
                     child: ProductRiskCard(product: product),
                   ),
                 ),
@@ -155,7 +157,7 @@ class _AlertSummary extends StatelessWidget {
       width: 190,
       child: Card(
         child: Padding(
-          padding: const EdgeInsets.all(16),
+          padding: EdgeInsets.all(16),
           child: Row(
             children: [
               Container(
@@ -167,25 +169,27 @@ class _AlertSummary extends StatelessWidget {
                 ),
                 child: Icon(icon, color: color),
               ),
-              const SizedBox(width: 12),
-              Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Text(
-                    '$value',
-                    style: const TextStyle(
-                      fontSize: 22,
-                      fontWeight: FontWeight.w900,
+              SizedBox(width: 12),
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      '$value',
+                      style: TextStyle(
+                        fontSize: 22,
+                        fontWeight: FontWeight.w900,
+                      ),
                     ),
-                  ),
-                  Text(
-                    label,
-                    style: const TextStyle(
-                      color: AppColors.muted,
-                      fontSize: 12,
+                    Text(
+                      label,
+                      style: TextStyle(
+                        color: Theme.of(context).colorScheme.onSurfaceVariant,
+                        fontSize: 12,
+                      ),
                     ),
-                  ),
-                ],
+                  ],
+                ),
               ),
             ],
           ),

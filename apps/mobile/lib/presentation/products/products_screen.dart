@@ -1,6 +1,5 @@
 import 'package:flutter/material.dart';
 
-import '../../core/theme/app_theme.dart';
 import '../../domain/inventory_repository.dart';
 import '../../domain/models.dart';
 import '../widgets/product_risk_card.dart';
@@ -17,7 +16,7 @@ class ProductsScreen extends StatefulWidget {
 
 class _ProductsScreenState extends State<ProductsScreen> {
   final _searchController = TextEditingController();
-  List<ProductSummary> _products = const [];
+  List<ProductSummary> _products = [];
   StockRisk? _risk;
   String? _error;
   var _loading = true;
@@ -69,7 +68,7 @@ class _ProductsScreenState extends State<ProductsScreen> {
   @override
   Widget build(BuildContext context) {
     if (_loading && _products.isEmpty) {
-      return const LoadingView(label: 'Carregando produtos...');
+      return LoadingView(label: 'Carregando produtos...');
     }
     if (_error != null && _products.isEmpty) {
       return ErrorView(message: _error!, onRetry: _loadProducts);
@@ -86,7 +85,7 @@ class _ProductsScreenState extends State<ProductsScreen> {
               ? (constraints.maxWidth - padding * 2 - 12) / 2
               : constraints.maxWidth - padding * 2;
           return ListView(
-            physics: const AlwaysScrollableScrollPhysics(),
+            physics: AlwaysScrollableScrollPhysics(),
             padding: EdgeInsets.fromLTRB(padding, 24, padding, 32),
             children: [
               Text(
@@ -96,12 +95,14 @@ class _ProductsScreenState extends State<ProductsScreen> {
                   letterSpacing: -0.6,
                 ),
               ),
-              const SizedBox(height: 5),
-              const Text(
+              SizedBox(height: 5),
+              Text(
                 'Consulte estoque, cobertura, classificação e risco.',
-                style: TextStyle(color: AppColors.muted),
+                style: TextStyle(
+                  color: Theme.of(context).colorScheme.onSurfaceVariant,
+                ),
               ),
-              const SizedBox(height: 18),
+              SizedBox(height: 18),
               Wrap(
                 spacing: 10,
                 runSpacing: 10,
@@ -113,14 +114,14 @@ class _ProductsScreenState extends State<ProductsScreen> {
                       controller: _searchController,
                       textInputAction: TextInputAction.search,
                       onSubmitted: (_) => _loadProducts(),
-                      decoration: const InputDecoration(
+                      decoration: InputDecoration(
                         prefixIcon: Icon(Icons.search_rounded),
                         hintText: 'Buscar produto ou SKU',
                       ),
                     ),
                   ),
                   InputDecorator(
-                    decoration: const InputDecoration(
+                    decoration: InputDecoration(
                       contentPadding: EdgeInsets.symmetric(
                         horizontal: 13,
                         vertical: 2,
@@ -128,9 +129,10 @@ class _ProductsScreenState extends State<ProductsScreen> {
                     ),
                     child: DropdownButtonHideUnderline(
                       child: DropdownButton<StockRisk?>(
+                        isExpanded: true,
                         value: _risk,
-                        hint: const Text('Todos os riscos'),
-                        items: const [
+                        hint: Text('Todos os riscos'),
+                        items: [
                           DropdownMenuItem(
                             value: null,
                             child: Text('Todos os riscos'),
@@ -157,40 +159,44 @@ class _ProductsScreenState extends State<ProductsScreen> {
                   ),
                   FilledButton.icon(
                     onPressed: _loading ? null : _loadProducts,
-                    icon: const Icon(Icons.search_rounded),
-                    label: const Text('Filtrar'),
+                    icon: Icon(Icons.search_rounded),
+                    label: Text('Filtrar'),
                   ),
-                  TextButton(
-                    onPressed: _clearFilters,
-                    child: const Text('Limpar'),
-                  ),
+                  TextButton(onPressed: _clearFilters, child: Text('Limpar')),
                 ],
               ),
               if (_loading) ...[
-                const SizedBox(height: 14),
-                const LinearProgressIndicator(minHeight: 2),
+                SizedBox(height: 14),
+                LinearProgressIndicator(minHeight: 2),
               ],
               if (_error != null) ...[
-                const SizedBox(height: 14),
-                Text(_error!, style: const TextStyle(color: AppColors.danger)),
+                SizedBox(height: 14),
+                Text(
+                  _error!,
+                  style: TextStyle(color: Theme.of(context).colorScheme.error),
+                ),
               ],
-              const SizedBox(height: 20),
-              Row(
+              SizedBox(height: 20),
+              Wrap(
+                alignment: WrapAlignment.spaceBetween,
+                spacing: 16,
+                runSpacing: 8,
                 children: [
-                  const Text(
+                  Text(
                     'Resultados',
                     style: TextStyle(fontWeight: FontWeight.w800),
                   ),
-                  const Spacer(),
                   Text(
                     '${_products.length} produtos',
-                    style: const TextStyle(color: AppColors.muted),
+                    style: TextStyle(
+                      color: Theme.of(context).colorScheme.onSurfaceVariant,
+                    ),
                   ),
                 ],
               ),
-              const SizedBox(height: 10),
+              SizedBox(height: 10),
               if (_products.isEmpty)
-                const SizedBox(
+                SizedBox(
                   height: 260,
                   child: EmptyView(
                     icon: Icons.search_off_rounded,

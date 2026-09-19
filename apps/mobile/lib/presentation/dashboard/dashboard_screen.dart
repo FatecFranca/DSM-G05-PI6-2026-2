@@ -26,6 +26,7 @@ class _DashboardScreenState extends State<DashboardScreen> {
   var _loading = true;
   var _refreshingForecast = false;
   var _horizon = 7;
+  var _requestId = 0;
 
   @override
   void initState() {
@@ -34,31 +35,37 @@ class _DashboardScreenState extends State<DashboardScreen> {
   }
 
   Future<void> _loadDashboard() async {
+    final requestId = ++_requestId;
     setState(() {
       _loading = true;
       _error = null;
     });
     try {
-      final summaryFuture = widget.repository.getDashboardSummary();
-      final forecastFuture = widget.repository.getForecast(horizon: _horizon);
-      final summary = await summaryFuture;
-      final forecast = await forecastFuture;
-      if (!mounted) return;
+      final results = await Future.wait<Object>([
+        widget.repository.getDashboardSummary(),
+        widget.repository.getForecast(horizon: _horizon),
+      ]);
+      final summary = results[0] as DashboardSummary;
+      final forecast = results[1] as ForecastResult;
+      if (!mounted || requestId != _requestId) return;
       setState(() {
         _summary = summary;
         _forecast = forecast;
         _loading = false;
+        _refreshingForecast = false;
       });
     } on Exception catch (error) {
-      if (!mounted) return;
+      if (!mounted || requestId != _requestId) return;
       setState(() {
         _error = error.toString();
         _loading = false;
+        _refreshingForecast = false;
       });
     }
   }
 
   Future<void> _changeHorizon(int horizon) async {
+    final requestId = ++_requestId;
     setState(() {
       _horizon = horizon;
       _refreshingForecast = true;
@@ -66,16 +73,18 @@ class _DashboardScreenState extends State<DashboardScreen> {
     });
     try {
       final forecast = await widget.repository.getForecast(horizon: horizon);
-      if (!mounted) return;
+      if (!mounted || requestId != _requestId) return;
       setState(() {
         _forecast = forecast;
         _refreshingForecast = false;
+        _loading = false;
       });
     } on Exception catch (error) {
-      if (!mounted) return;
+      if (!mounted || requestId != _requestId) return;
       setState(() {
         _error = error.toString();
         _refreshingForecast = false;
+        _loading = false;
       });
     }
   }
@@ -83,16 +92,14 @@ class _DashboardScreenState extends State<DashboardScreen> {
   @override
   Widget build(BuildContext context) {
     if (_loading && _summary == null) {
-      return const LoadingView(label: 'Consultando o estoque...');
+      return LoadingView(label: 'Consultando o estoque...');
     }
     if (_error != null && _summary == null) {
       return ErrorView(message: _error!, onRetry: _loadDashboard);
     }
 
     final summary = _summary!;
-    final series = _forecast?.data.isNotEmpty == true
-        ? _forecast!.data
-        : summary.demandSeries;
+    final series = _forecast?.data ?? summary.demandSeries;
 
     return RefreshIndicator(
       onRefresh: _loadDashboard,
@@ -100,43 +107,61 @@ class _DashboardScreenState extends State<DashboardScreen> {
         builder: (context, constraints) {
           final pagePadding = constraints.maxWidth >= 900 ? 30.0 : 16.0;
           return ListView(
-            physics: const AlwaysScrollableScrollPhysics(),
+            physics: AlwaysScrollableScrollPhysics(),
             padding: EdgeInsets.fromLTRB(pagePadding, 24, pagePadding, 32),
             children: [
               _DashboardIntro(
                 lastSyncAt: summary.meta.lastSyncAt,
                 horizon: _horizon,
-                refreshing: _refreshingForecast,
+                refreshing: _refreshingForecast || _loading,
                 onHorizonChanged: _changeHorizon,
                 onRefresh: _loadDashboard,
               ),
               if (_error != null) ...[
-                const SizedBox(height: 14),
+                SizedBox(height: 14),
                 MaterialBanner(
                   content: Text(_error!),
-                  leading: const Icon(Icons.warning_amber_rounded),
+                  leading: Icon(Icons.warning_amber_rounded),
                   actions: [
                     TextButton(
                       onPressed: _loadDashboard,
-                      child: const Text('Tentar novamente'),
+                      child: Text('Tentar novamente'),
                     ),
                   ],
                 ),
               ],
-              const SizedBox(height: 20),
-              _MetricsGrid(kpis: summary.kpis),
-              const SizedBox(height: 14),
-              _AnalyticsSection(
-                series: series,
-                horizon: _horizon,
-                classifications: summary.classifications,
+              SizedBox(height: 20),
+              Card(
+                color: Theme.of(context).colorScheme.secondaryContainer,
+                child: Padding(
+                  padding: EdgeInsets.all(16),
+                  child: Text(
+                    'ANÁLISE HISTÓRICA · Saldos iniciais e custos simulados. As projeções começam após o fim da base, não na data atual.'
+                    '${summary.meta.datasetPeriodEnd == null ? '' : ' Referência até ${DateFormat('dd/MM/yyyy').format(summary.meta.datasetPeriodEnd!.toUtc())}.'}',
+                    style: TextStyle(height: 1.5),
+                  ),
+                ),
               ),
-              const SizedBox(height: 14),
+              SizedBox(height: 16),
+              _MetricsGrid(kpis: summary.kpis),
+              SizedBox(height: 14),
+              if (_refreshingForecast)
+                const SizedBox(
+                  height: 250,
+                  child: LoadingView(label: 'Atualizando a projeção…'),
+                )
+              else
+                _AnalyticsSection(
+                  series: _error == null && !_refreshingForecast ? series : [],
+                  horizon: _horizon,
+                  classifications: summary.classifications,
+                ),
+              SizedBox(height: 14),
               const _InsightCard(),
-              const SizedBox(height: 20),
+              SizedBox(height: 20),
               Row(
                 children: [
-                  const Expanded(
+                  Expanded(
                     child: Text(
                       'Produtos que exigem atenção',
                       style: TextStyle(
@@ -147,13 +172,15 @@ class _DashboardScreenState extends State<DashboardScreen> {
                   ),
                   Text(
                     '${summary.riskProducts.length} itens',
-                    style: const TextStyle(color: AppColors.muted),
+                    style: TextStyle(
+                      color: Theme.of(context).colorScheme.onSurfaceVariant,
+                    ),
                   ),
                 ],
               ),
-              const SizedBox(height: 10),
+              SizedBox(height: 10),
               if (summary.riskProducts.isEmpty)
-                const SizedBox(
+                SizedBox(
                   height: 180,
                   child: EmptyView(
                     icon: Icons.verified_rounded,
@@ -165,7 +192,7 @@ class _DashboardScreenState extends State<DashboardScreen> {
               else
                 ...summary.riskProducts.map(
                   (product) => Padding(
-                    padding: const EdgeInsets.only(bottom: 10),
+                    padding: EdgeInsets.only(bottom: 10),
                     child: ProductRiskCard(product: product),
                   ),
                 ),
@@ -205,20 +232,20 @@ class _DashboardIntro extends StatelessWidget {
       alignment: WrapAlignment.spaceBetween,
       children: [
         ConstrainedBox(
-          constraints: const BoxConstraints(maxWidth: 580),
+          constraints: BoxConstraints(maxWidth: 580),
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              const Text(
+              Text(
                 'VISÃO GERAL',
                 style: TextStyle(
-                  color: AppColors.brand,
+                  color: Theme.of(context).colorScheme.primary,
                   fontSize: 11,
                   fontWeight: FontWeight.w800,
                   letterSpacing: 1.2,
                 ),
               ),
-              const SizedBox(height: 7),
+              SizedBox(height: 7),
               Text(
                 'Decisões de estoque, mais claras.',
                 style: Theme.of(context).textTheme.headlineSmall?.copyWith(
@@ -226,10 +253,13 @@ class _DashboardIntro extends StatelessWidget {
                   letterSpacing: -0.7,
                 ),
               ),
-              const SizedBox(height: 5),
+              SizedBox(height: 5),
               Text(
                 'Dados operacionais e previsões em uma visão única. · $syncLabel',
-                style: const TextStyle(color: AppColors.muted, height: 1.4),
+                style: TextStyle(
+                  color: Theme.of(context).colorScheme.onSurfaceVariant,
+                  height: 1.4,
+                ),
               ),
             ],
           ),
@@ -242,10 +272,10 @@ class _DashboardIntro extends StatelessWidget {
             DropdownButton<int>(
               value: horizon,
               borderRadius: BorderRadius.circular(12),
-              items: const [
-                DropdownMenuItem(value: 7, child: Text('Próximos 7 dias')),
-                DropdownMenuItem(value: 30, child: Text('Próximos 30 dias')),
-                DropdownMenuItem(value: 90, child: Text('Próximos 90 dias')),
+              items: [
+                DropdownMenuItem(value: 7, child: Text('7 dias')),
+                DropdownMenuItem(value: 30, child: Text('30 dias')),
+                DropdownMenuItem(value: 90, child: Text('90 dias')),
               ],
               onChanged: refreshing
                   ? null
@@ -256,12 +286,12 @@ class _DashboardIntro extends StatelessWidget {
             OutlinedButton.icon(
               onPressed: refreshing ? null : onRefresh,
               icon: refreshing
-                  ? const SizedBox.square(
+                  ? SizedBox.square(
                       dimension: 16,
                       child: CircularProgressIndicator(strokeWidth: 2),
                     )
-                  : const Icon(Icons.refresh_rounded),
-              label: const Text('Atualizar'),
+                  : Icon(Icons.refresh_rounded),
+              label: Text('Atualizar'),
             ),
           ],
         ),
@@ -279,16 +309,19 @@ class _MetricsGrid extends StatelessWidget {
   Widget build(BuildContext context) {
     final currency = NumberFormat.compactCurrency(
       locale: 'pt_BR',
-      symbol: 'R\$',
+      name: kpis.stockValueCurrency,
+      symbol: kpis.stockValueCurrency == 'GBP'
+          ? '£ '
+          : '${kpis.stockValueCurrency} ',
       decimalDigits: 1,
     );
     final metrics = [
       _MetricData(
         label: 'Valor em estoque',
         value: currency.format(kpis.stockValue),
-        detail: 'posição atual',
+        detail: 'saldo simulado · ${kpis.stockValueCurrency}',
         icon: Icons.warehouse_outlined,
-        color: AppColors.brand,
+        color: Theme.of(context).colorScheme.primary,
       ),
       _MetricData(
         label: 'Produtos ativos',
@@ -302,12 +335,12 @@ class _MetricsGrid extends StatelessWidget {
         value: '${kpis.stockoutRisk}',
         detail: 'reposição necessária',
         icon: Icons.warning_amber_rounded,
-        color: AppColors.danger,
+        color: Theme.of(context).colorScheme.error,
       ),
       _MetricData(
-        label: 'Nível de serviço',
-        value: '${kpis.serviceLevel.toStringAsFixed(1)}%',
-        detail: 'últimos 30 dias',
+        label: 'Horizonte de análise',
+        value: '7 / 30 / 90',
+        detail: 'dias após o fim do histórico',
         icon: Icons.verified_user_outlined,
         color: AppColors.warning,
       ),
@@ -363,7 +396,7 @@ class _MetricCard extends StatelessWidget {
   Widget build(BuildContext context) {
     return Card(
       child: Padding(
-        padding: const EdgeInsets.all(17),
+        padding: EdgeInsets.all(17),
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
@@ -372,8 +405,8 @@ class _MetricCard extends StatelessWidget {
                 Expanded(
                   child: Text(
                     metric.label,
-                    style: const TextStyle(
-                      color: AppColors.muted,
+                    style: TextStyle(
+                      color: Theme.of(context).colorScheme.onSurfaceVariant,
                       fontSize: 12,
                     ),
                   ),
@@ -389,19 +422,22 @@ class _MetricCard extends StatelessWidget {
                 ),
               ],
             ),
-            const SizedBox(height: 9),
+            SizedBox(height: 9),
             Text(
               metric.value,
-              style: const TextStyle(
+              style: TextStyle(
                 fontSize: 24,
                 fontWeight: FontWeight.w900,
                 letterSpacing: -0.8,
               ),
             ),
-            const SizedBox(height: 3),
+            SizedBox(height: 3),
             Text(
               metric.detail,
-              style: const TextStyle(color: AppColors.muted, fontSize: 11),
+              style: TextStyle(
+                color: Theme.of(context).colorScheme.onSurfaceVariant,
+                fontSize: 11,
+              ),
             ),
           ],
         ),
@@ -432,12 +468,12 @@ class _AnalyticsSection extends StatelessWidget {
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
               Expanded(flex: 2, child: chart),
-              const SizedBox(width: 14),
+              SizedBox(width: 14),
               Expanded(child: classes),
             ],
           );
         }
-        return Column(children: [chart, const SizedBox(height: 14), classes]);
+        return Column(children: [chart, SizedBox(height: 14), classes]);
       },
     );
   }
@@ -475,13 +511,13 @@ class _DemandChart extends StatelessWidget {
 
     return Card(
       child: Padding(
-        padding: const EdgeInsets.all(18),
+        padding: EdgeInsets.all(18),
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
             Row(
               children: [
-                const Expanded(
+                Expanded(
                   child: Text(
                     'Demanda real × prevista',
                     style: TextStyle(fontWeight: FontWeight.w800),
@@ -489,30 +525,36 @@ class _DemandChart extends StatelessWidget {
                 ),
                 Text(
                   '$horizon dias',
-                  style: const TextStyle(color: AppColors.muted, fontSize: 12),
+                  style: TextStyle(
+                    color: Theme.of(context).colorScheme.onSurfaceVariant,
+                    fontSize: 12,
+                  ),
                 ),
               ],
             ),
-            const SizedBox(height: 6),
-            const Row(
+            SizedBox(height: 6),
+            Row(
               children: [
-                _LegendDot(color: AppColors.ink),
+                _LegendDot(color: Theme.of(context).colorScheme.onSurface),
                 Text('Real', style: TextStyle(fontSize: 11)),
                 SizedBox(width: 14),
-                _LegendDot(color: AppColors.brand),
+                _LegendDot(color: Theme.of(context).colorScheme.primary),
                 Text('Prevista', style: TextStyle(fontSize: 11)),
               ],
             ),
-            const SizedBox(height: 16),
+            SizedBox(height: 16),
             SizedBox(
               height: 245,
               child: series.isEmpty
-                  ? const EmptyView(
+                  ? EmptyView(
                       icon: Icons.show_chart_rounded,
                       title: 'Previsão indisponível',
                       description: 'Ainda não existem pontos publicados.',
                     )
                   : LineChart(
+                      duration: MediaQuery.disableAnimationsOf(context)
+                          ? Duration.zero
+                          : const Duration(milliseconds: 180),
                       LineChartData(
                         minX: 0,
                         maxX: math.max(1, series.length - 1).toDouble(),
@@ -520,20 +562,20 @@ class _DemandChart extends StatelessWidget {
                         maxY: maxY,
                         gridData: FlGridData(
                           drawVerticalLine: false,
-                          getDrawingHorizontalLine: (_) => const FlLine(
-                            color: AppColors.line,
+                          getDrawingHorizontalLine: (_) => FlLine(
+                            color: Theme.of(context).colorScheme.outlineVariant,
                             strokeWidth: 1,
                           ),
                         ),
                         borderData: FlBorderData(show: false),
                         titlesData: FlTitlesData(
-                          topTitles: const AxisTitles(
+                          topTitles: AxisTitles(
                             sideTitles: SideTitles(showTitles: false),
                           ),
-                          rightTitles: const AxisTitles(
+                          rightTitles: AxisTitles(
                             sideTitles: SideTitles(showTitles: false),
                           ),
-                          leftTitles: const AxisTitles(
+                          leftTitles: AxisTitles(
                             sideTitles: SideTitles(
                               showTitles: true,
                               reservedSize: 34,
@@ -549,15 +591,17 @@ class _DemandChart extends StatelessWidget {
                               getTitlesWidget: (value, meta) {
                                 final index = value.round();
                                 if (index < 0 || index >= series.length) {
-                                  return const SizedBox.shrink();
+                                  return SizedBox.shrink();
                                 }
                                 return Padding(
-                                  padding: const EdgeInsets.only(top: 7),
+                                  padding: EdgeInsets.only(top: 7),
                                   child: Text(
                                     series[index].label,
-                                    style: const TextStyle(
+                                    style: TextStyle(
                                       fontSize: 9,
-                                      color: AppColors.muted,
+                                      color: Theme.of(
+                                        context,
+                                      ).colorScheme.onSurfaceVariant,
                                     ),
                                   ),
                                 );
@@ -569,23 +613,25 @@ class _DemandChart extends StatelessWidget {
                           if (actual.isNotEmpty)
                             LineChartBarData(
                               spots: actual,
-                              isCurved: true,
-                              color: AppColors.ink,
+                              isCurved: false,
+                              color: Theme.of(context).colorScheme.onSurface,
                               barWidth: 2.5,
-                              dotData: const FlDotData(show: false),
+                              dotData: FlDotData(show: false),
                               belowBarData: BarAreaData(show: false),
                             ),
                           if (forecast.isNotEmpty)
                             LineChartBarData(
                               spots: forecast,
-                              isCurved: true,
-                              color: AppColors.brand,
+                              isCurved: false,
+                              color: Theme.of(context).colorScheme.primary,
                               barWidth: 2.5,
                               dashArray: [7, 4],
-                              dotData: const FlDotData(show: false),
+                              dotData: FlDotData(show: false),
                               belowBarData: BarAreaData(
                                 show: true,
-                                color: AppColors.brand.withValues(alpha: 0.08),
+                                color: Theme.of(
+                                  context,
+                                ).colorScheme.primary.withValues(alpha: 0.08),
                               ),
                             ),
                         ],
@@ -608,7 +654,7 @@ class _LegendDot extends StatelessWidget {
   Widget build(BuildContext context) => Container(
     width: 8,
     height: 8,
-    margin: const EdgeInsets.only(right: 5),
+    margin: EdgeInsets.only(right: 5),
     decoration: BoxDecoration(color: color, shape: BoxShape.circle),
   );
 }
@@ -622,22 +668,25 @@ class _ClassificationCard extends StatelessWidget {
   Widget build(BuildContext context) {
     return Card(
       child: Padding(
-        padding: const EdgeInsets.all(18),
+        padding: EdgeInsets.all(18),
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            const Text(
+            Text(
               'Classificação ABC',
               style: TextStyle(fontWeight: FontWeight.w800),
             ),
-            const SizedBox(height: 4),
-            const Text(
+            SizedBox(height: 4),
+            Text(
               'Participação dos itens monitorados',
-              style: TextStyle(color: AppColors.muted, fontSize: 12),
+              style: TextStyle(
+                color: Theme.of(context).colorScheme.onSurfaceVariant,
+                fontSize: 12,
+              ),
             ),
-            const SizedBox(height: 20),
+            SizedBox(height: 20),
             if (data.isEmpty)
-              const SizedBox(
+              SizedBox(
                 height: 180,
                 child: EmptyView(
                   icon: Icons.donut_large_rounded,
@@ -653,23 +702,23 @@ class _ClassificationCard extends StatelessWidget {
                     Expanded(
                       child: Text(
                         item.name,
-                        style: const TextStyle(fontWeight: FontWeight.w700),
+                        style: TextStyle(fontWeight: FontWeight.w700),
                       ),
                     ),
                     Text('${item.products} · ${item.percent}%'),
                   ],
                 ),
-                const SizedBox(height: 7),
+                SizedBox(height: 7),
                 ClipRRect(
                   borderRadius: BorderRadius.circular(999),
                   child: LinearProgressIndicator(
                     value: item.percent.clamp(0, 100) / 100,
                     minHeight: 8,
-                    backgroundColor: AppColors.canvas,
+                    backgroundColor: Theme.of(context).scaffoldBackgroundColor,
                     color: _hexColor(item.color),
                   ),
                 ),
-                const SizedBox(height: 18),
+                SizedBox(height: 18),
               ],
           ],
         ),
@@ -684,9 +733,9 @@ class _InsightCard extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Card(
-      color: AppColors.brandSoft,
+      color: Theme.of(context).colorScheme.secondaryContainer,
       child: Padding(
-        padding: const EdgeInsets.all(16),
+        padding: EdgeInsets.all(16),
         child: Row(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
@@ -694,20 +743,20 @@ class _InsightCard extends StatelessWidget {
               width: 38,
               height: 38,
               decoration: BoxDecoration(
-                color: AppColors.brand,
+                color: Theme.of(context).colorScheme.primary,
                 borderRadius: BorderRadius.circular(11),
               ),
-              child: const Icon(Icons.trending_up_rounded, color: Colors.white),
+              child: Icon(Icons.trending_up_rounded, color: Colors.white),
             ),
-            const SizedBox(width: 12),
-            const Expanded(
+            SizedBox(width: 12),
+            Expanded(
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
                   Text(
-                    'INSIGHT DO DIA',
+                    'ORIENTAÇÃO DE ANÁLISE',
                     style: TextStyle(
-                      color: AppColors.brandDark,
+                      color: Theme.of(context).colorScheme.onSecondaryContainer,
                       fontSize: 11,
                       fontWeight: FontWeight.w900,
                       letterSpacing: 0.7,

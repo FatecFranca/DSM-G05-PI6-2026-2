@@ -1,7 +1,5 @@
 import 'package:flutter/material.dart';
 
-import '../../core/theme/app_theme.dart';
-
 class AppBrandMark extends StatelessWidget {
   const AppBrandMark({super.key, this.size = 40});
 
@@ -14,7 +12,7 @@ class AppBrandMark extends StatelessWidget {
       height: size,
       padding: EdgeInsets.all(size * 0.08),
       decoration: BoxDecoration(
-        color: AppColors.brandSoft,
+        color: Theme.of(context).colorScheme.secondaryContainer,
         borderRadius: BorderRadius.circular(size * 0.28),
       ),
       child: Image.asset(
@@ -34,10 +32,10 @@ class AppBrand extends StatelessWidget {
   Widget build(BuildContext context) {
     return Row(
       children: [
-        const AppBrandMark(),
+        AppBrandMark(),
         if (!compact) ...[
-          const SizedBox(width: 11),
-          const Flexible(
+          SizedBox(width: 11),
+          Flexible(
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
@@ -52,7 +50,7 @@ class AppBrand extends StatelessWidget {
                   maxLines: 1,
                   overflow: TextOverflow.ellipsis,
                   style: TextStyle(
-                    color: AppColors.brand,
+                    color: Theme.of(context).colorScheme.primary,
                     fontWeight: FontWeight.w700,
                     fontSize: 9,
                     letterSpacing: 0.7,

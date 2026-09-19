@@ -8,6 +8,24 @@ class HttpInventoryRepository implements InventoryRepository {
   final InventoryApiClient _client;
 
   @override
+  Future<DatasetInfo> getCurrentDataset() async {
+    final json = await _client.getJson('/api/v1/datasets/current');
+    return DatasetInfo(
+      license: _string(json['license']),
+      version: _string(json['version']),
+      fingerprint: _string(json['fileSha256']),
+      recordsRead: _int(json['recordsRead']),
+      recordsAccepted: _int(json['recordsAccepted']),
+      recordsRejected: _int(json['recordsRejected']),
+      startedOn: _dateTime(json['periodStartedOn']),
+      endedOn: _dateTime(json['periodEndedOn']),
+      quality: _map(
+        json['qualitySummary'],
+      ).map((key, value) => MapEntry(key, _int(value))),
+    );
+  }
+
+  @override
   Future<DashboardSummary> getDashboardSummary() async {
     final json = await _client.getJson('/api/v1/dashboard/summary');
     final meta = _map(json['meta']);
@@ -17,9 +35,14 @@ class HttpInventoryRepository implements InventoryRepository {
       meta: DashboardMeta(
         source: _string(meta['source'], fallback: 'postgresql'),
         lastSyncAt: _dateTime(meta['lastSyncAt']),
+        datasetPeriodEnd: _dateTime(meta['datasetPeriodEnd']),
       ),
       kpis: DashboardKpis(
         stockValue: _double(kpis['stockValue']),
+        stockValueCurrency: _string(
+          kpis['stockValueCurrency'],
+          fallback: 'GBP',
+        ),
         activeProducts: _int(kpis['activeProducts']),
         stockoutRisk: _int(kpis['stockoutRisk']),
         serviceLevel: _double(kpis['serviceLevel']),

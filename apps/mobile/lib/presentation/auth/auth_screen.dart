@@ -1,6 +1,6 @@
 import 'package:flutter/material.dart';
+import '../widgets/theme_picker.dart';
 import '../../application/auth_controller.dart';
-import '../../core/theme/app_theme.dart';
 import '../../data/inventory_api_client.dart';
 import '../widgets/app_brand.dart';
 
@@ -139,83 +139,85 @@ class _AuthScreenState extends State<AuthScreen> {
         _mode == AuthMode.change;
     final duration = MediaQuery.disableAnimationsOf(context)
         ? Duration.zero
-        : const Duration(milliseconds: 220);
+        : Duration(milliseconds: 220);
     final content = SafeArea(
       child: SingleChildScrollView(
-        padding: const EdgeInsets.all(24),
+        padding: EdgeInsets.all(24),
         child: Center(
           child: ConstrainedBox(
-            constraints: const BoxConstraints(maxWidth: 460),
+            constraints: BoxConstraints(maxWidth: 460),
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.stretch,
               children: [
-                const AppBrand(),
-                const SizedBox(height: 28),
+                AppBrand(),
+                SizedBox(height: 28),
                 Card(
                   child: Padding(
-                    padding: const EdgeInsets.all(24),
+                    padding: EdgeInsets.all(24),
                     child: AnimatedSwitcher(
                       duration: duration,
                       layoutBuilder: (current, previous) =>
-                          current ?? const SizedBox.shrink(),
+                          current ?? SizedBox.shrink(),
                       child: Column(
                         key: ValueKey('${_mode.name}-${_success != null}'),
                         crossAxisAlignment: CrossAxisAlignment.stretch,
                         children: [
                           Text(
                             _success == null ? title : 'Tudo certo!',
-                            style: const TextStyle(
+                            style: TextStyle(
                               fontSize: 25,
                               fontWeight: FontWeight.w800,
                             ),
                           ),
-                          const SizedBox(height: 12),
+                          SizedBox(height: 12),
                           if (_mode == AuthMode.change && auth.user != null)
                             Text(
                               '${auth.user!.name}\n${auth.user!.email}',
-                              style: const TextStyle(color: AppColors.muted),
+                              style: TextStyle(
+                                color: Theme.of(
+                                  context,
+                                ).colorScheme.onSurfaceVariant,
+                              ),
                             ),
                           if (_success != null) ...[
-                            const SizedBox(height: 24),
-                            const Icon(
+                            SizedBox(height: 24),
+                            Icon(
                               Icons.check_circle_outline,
-                              color: AppColors.brand,
+                              color: Theme.of(context).colorScheme.primary,
                               size: 48,
                             ),
-                            const SizedBox(height: 16),
+                            SizedBox(height: 16),
                             Semantics(liveRegion: true, child: Text(_success!)),
-                            const SizedBox(height: 24),
+                            SizedBox(height: 24),
                             FilledButton(
                               onPressed: () => _switch(AuthMode.login),
-                              child: const Text('Ir para o login'),
+                              child: Text('Ir para o login'),
                             ),
                             if (_mode == AuthMode.forgot)
                               TextButton(
                                 onPressed: () => _switch(AuthMode.reset),
-                                child: const Text(
-                                  'Já tenho o link de recuperação',
-                                ),
+                                child: Text('Já tenho o link de recuperação'),
                               ),
                           ] else ...[
                             if (_mode == AuthMode.login && auth.notice != null)
                               _Notice(auth.notice!),
                             if (_mode == AuthMode.forgot)
-                              const Text(
+                              Text(
                                 'Informe seu e-mail para receber um link de recuperação.',
                               ),
                             if (_mode == AuthMode.reset)
-                              const Text(
+                              Text(
                                 'Cole o link completo recebido por e-mail. Ele só pode ser usado uma vez.',
                               ),
                             if (_mode == AuthMode.change)
-                              const Padding(
+                              Padding(
                                 padding: EdgeInsets.only(top: 12),
                                 child: Text(
                                   'A troca de senha encerra todas as suas sessões.',
                                 ),
                               ),
                             if (_error != null) _Notice(_error!, error: true),
-                            const SizedBox(height: 20),
+                            SizedBox(height: 20),
                             Form(
                               key: _form,
                               child: AutofillGroup(
@@ -227,19 +229,17 @@ class _AuthScreenState extends State<AuthScreen> {
                                       TextFormField(
                                         controller: _name,
                                         enabled: !_busy,
-                                        decoration: const InputDecoration(
+                                        decoration: InputDecoration(
                                           labelText: 'Seu nome',
                                         ),
-                                        autofillHints: const [
-                                          AutofillHints.name,
-                                        ],
+                                        autofillHints: [AutofillHints.name],
                                         maxLength: 100,
                                         validator: (v) =>
                                             (v?.trim().length ?? 0) < 2
                                             ? 'Informe seu nome.'
                                             : null,
                                       ),
-                                      const SizedBox(height: 16),
+                                      SizedBox(height: 16),
                                     ],
                                     if (_mode == AuthMode.login ||
                                         _mode == AuthMode.register ||
@@ -247,15 +247,13 @@ class _AuthScreenState extends State<AuthScreen> {
                                       TextFormField(
                                         controller: _email,
                                         enabled: !_busy,
-                                        decoration: const InputDecoration(
+                                        decoration: InputDecoration(
                                           labelText: 'E-mail',
                                         ),
                                         keyboardType:
                                             TextInputType.emailAddress,
                                         autocorrect: false,
-                                        autofillHints: const [
-                                          AutofillHints.email,
-                                        ],
+                                        autofillHints: [AutofillHints.email],
                                         validator: (v) =>
                                             v == null ||
                                                 v.trim().length > 254 ||
@@ -265,13 +263,13 @@ class _AuthScreenState extends State<AuthScreen> {
                                             ? 'Informe um e-mail válido.'
                                             : null,
                                       ),
-                                      const SizedBox(height: 16),
+                                      SizedBox(height: 16),
                                     ],
                                     if (_mode == AuthMode.reset) ...[
                                       TextFormField(
                                         controller: _link,
                                         enabled: !_busy,
-                                        decoration: const InputDecoration(
+                                        decoration: InputDecoration(
                                           labelText: 'Link de recuperação',
                                         ),
                                         autocorrect: false,
@@ -282,11 +280,11 @@ class _AuthScreenState extends State<AuthScreen> {
                                             ? 'Cole o link recebido por e-mail.'
                                             : null,
                                       ),
-                                      const SizedBox(height: 16),
+                                      SizedBox(height: 16),
                                     ],
                                     if (_mode == AuthMode.change) ...[
                                       _passwordField('Senha atual', _current),
-                                      const SizedBox(height: 16),
+                                      SizedBox(height: 16),
                                     ],
                                     if (_mode != AuthMode.forgot) ...[
                                       _passwordField(
@@ -294,7 +292,7 @@ class _AuthScreenState extends State<AuthScreen> {
                                         _password,
                                         isNew: newPassword,
                                       ),
-                                      const SizedBox(height: 16),
+                                      SizedBox(height: 16),
                                     ],
                                     if (newPassword) ...[
                                       _passwordField(
@@ -303,14 +301,14 @@ class _AuthScreenState extends State<AuthScreen> {
                                         isNew: true,
                                         confirmation: true,
                                       ),
-                                      const SizedBox(height: 16),
+                                      SizedBox(height: 16),
                                     ],
                                     if (_mode == AuthMode.login)
                                       CheckboxListTile(
                                         contentPadding: EdgeInsets.zero,
                                         controlAffinity:
                                             ListTileControlAffinity.leading,
-                                        title: const Text(
+                                        title: Text(
                                           'Manter conectado por 7 dias',
                                           style: TextStyle(fontSize: 13),
                                         ),
@@ -324,7 +322,7 @@ class _AuthScreenState extends State<AuthScreen> {
                                     FilledButton(
                                       onPressed: _busy ? null : _submit,
                                       child: Padding(
-                                        padding: const EdgeInsets.symmetric(
+                                        padding: EdgeInsets.symmetric(
                                           vertical: 13,
                                         ),
                                         child: Row(
@@ -335,7 +333,7 @@ class _AuthScreenState extends State<AuthScreen> {
                                                 !MediaQuery.disableAnimationsOf(
                                                   context,
                                                 )) ...[
-                                              const SizedBox(
+                                              SizedBox(
                                                 width: 18,
                                                 height: 18,
                                                 child:
@@ -343,7 +341,7 @@ class _AuthScreenState extends State<AuthScreen> {
                                                       strokeWidth: 2,
                                                     ),
                                               ),
-                                              const SizedBox(width: 12),
+                                              SizedBox(width: 12),
                                             ],
                                             Flexible(
                                               child: Text(
@@ -363,39 +361,37 @@ class _AuthScreenState extends State<AuthScreen> {
                                 onPressed: _busy
                                     ? null
                                     : () => _switch(AuthMode.forgot),
-                                child: const Text('Esqueci minha senha'),
+                                child: Text('Esqueci minha senha'),
                               ),
                               if (auth.registrationEnabled)
                                 TextButton(
                                   onPressed: _busy
                                       ? null
                                       : () => _switch(AuthMode.register),
-                                  child: const Text('Criar conta'),
+                                  child: Text('Criar conta'),
                                 ),
                             ] else if (_mode != AuthMode.change)
                               TextButton(
                                 onPressed: _busy
                                     ? null
                                     : () => _switch(AuthMode.login),
-                                child: const Text('Voltar para o login'),
+                                child: Text('Voltar para o login'),
                               ),
                             if (_mode == AuthMode.forgot)
                               TextButton(
                                 onPressed: _busy
                                     ? null
                                     : () => _switch(AuthMode.reset),
-                                child: const Text(
-                                  'Já tenho o link de recuperação',
-                                ),
+                                child: Text('Já tenho o link de recuperação'),
                               ),
                             if (_mode == AuthMode.change) ...[
-                              const SizedBox(height: 20),
+                              SizedBox(height: 20),
                               OutlinedButton.icon(
                                 onPressed: _busy
                                     ? null
                                     : () => _submit(logout: true),
-                                icon: const Icon(Icons.logout),
-                                label: const Text('Sair da conta'),
+                                icon: Icon(Icons.logout),
+                                label: Text('Sair da conta'),
                               ),
                             ],
                           ],
@@ -404,11 +400,14 @@ class _AuthScreenState extends State<AuthScreen> {
                     ),
                   ),
                 ),
-                const SizedBox(height: 24),
-                const Text(
+                SizedBox(height: 24),
+                Text(
                   'Estoque Inteligente · Grupo 05',
                   textAlign: TextAlign.center,
-                  style: TextStyle(color: AppColors.muted, fontSize: 12),
+                  style: TextStyle(
+                    color: Theme.of(context).colorScheme.onSurfaceVariant,
+                    fontSize: 12,
+                  ),
                 ),
               ],
             ),
@@ -416,7 +415,12 @@ class _AuthScreenState extends State<AuthScreen> {
         ),
       ),
     );
-    return widget.embedded ? content : Scaffold(body: content);
+    return widget.embedded
+        ? content
+        : Scaffold(
+            appBar: AppBar(actions: [ThemePicker(), SizedBox(width: 12)]),
+            body: content,
+          );
   }
 
   Widget _passwordField(
@@ -501,15 +505,21 @@ class _Notice extends StatelessWidget {
   Widget build(BuildContext context) => Semantics(
     liveRegion: true,
     child: Container(
-      margin: const EdgeInsets.only(top: 16),
-      padding: const EdgeInsets.all(12),
+      margin: EdgeInsets.only(top: 16),
+      padding: EdgeInsets.all(12),
       decoration: BoxDecoration(
-        color: error ? const Color(0xFFFDEDED) : AppColors.brandSoft,
+        color: error
+            ? Color(0xFFFDEDED)
+            : Theme.of(context).colorScheme.secondaryContainer,
         borderRadius: BorderRadius.circular(10),
       ),
       child: Text(
         message,
-        style: TextStyle(color: error ? AppColors.danger : AppColors.brandDark),
+        style: TextStyle(
+          color: error
+              ? Theme.of(context).colorScheme.error
+              : Theme.of(context).colorScheme.onSecondaryContainer,
+        ),
       ),
     ),
   );
@@ -521,34 +531,34 @@ class AuthLoadingScreen extends StatelessWidget {
   Widget build(BuildContext context) => Scaffold(
     body: Center(
       child: Padding(
-        padding: const EdgeInsets.all(24),
+        padding: EdgeInsets.all(24),
         child: ConstrainedBox(
-          constraints: const BoxConstraints(maxWidth: 412),
+          constraints: BoxConstraints(maxWidth: 412),
           child: Column(
             mainAxisSize: MainAxisSize.min,
             crossAxisAlignment: CrossAxisAlignment.stretch,
             children: [
-              const AppBrand(),
-              const SizedBox(height: 32),
+              AppBrand(),
+              SizedBox(height: 32),
               for (final width in [240.0, 320.0, 320.0])
                 Padding(
-                  padding: const EdgeInsets.only(bottom: 18),
+                  padding: EdgeInsets.only(bottom: 18),
                   child: Align(
                     alignment: Alignment.centerLeft,
                     child: Container(
                       height: 38,
                       width: width,
                       decoration: BoxDecoration(
-                        color: AppColors.line,
+                        color: Theme.of(context).colorScheme.outlineVariant,
                         borderRadius: BorderRadius.circular(10),
                       ),
                     ),
                   ),
                 ),
               if (!MediaQuery.disableAnimationsOf(context))
-                const LinearProgressIndicator(),
-              const SizedBox(height: 20),
-              const Text(
+                LinearProgressIndicator(),
+              SizedBox(height: 20),
+              Text(
                 'Verificando sua sessão…',
                 semanticsLabel: 'Verificando sua sessão',
                 textAlign: TextAlign.center,

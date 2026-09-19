@@ -9,78 +9,130 @@ class ProductRiskCard extends StatelessWidget {
   final ProductSummary product;
   final bool dense;
 
+  void _showDetails(BuildContext context) {
+    showModalBottomSheet<void>(
+      context: context,
+      isScrollControlled: true,
+      useSafeArea: true,
+      showDragHandle: true,
+      sheetAnimationStyle: MediaQuery.disableAnimationsOf(context)
+          ? AnimationStyle.noAnimation
+          : null,
+      builder: (context) => FractionallySizedBox(
+        heightFactor: .75,
+        child: ListView(
+          padding: const EdgeInsets.fromLTRB(24, 8, 24, 24),
+          children: [
+            Text(
+              product.name,
+              style: Theme.of(
+                context,
+              ).textTheme.headlineSmall?.copyWith(fontWeight: FontWeight.w800),
+            ),
+            const SizedBox(height: 16),
+            for (final entry in {
+              'SKU': product.sku,
+              'Categoria': product.category,
+              'Classe': product.classification,
+              'Estoque': '${product.stock} unidades',
+              'Previsão histórica de 30 dias': '${product.forecast} unidades',
+              'Cobertura': product.coverage == 999
+                  ? 'Sem referência de demanda recente'
+                  : '${product.coverage} dias',
+              'Situação': product.severity,
+            }.entries)
+              ListTile(
+                contentPadding: EdgeInsets.zero,
+                title: Text(entry.key),
+                subtitle: SelectableText(entry.value),
+              ),
+            const SizedBox(height: 12),
+            FilledButton(
+              onPressed: () => Navigator.pop(context),
+              child: const Text('Fechar detalhes'),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
   @override
   Widget build(BuildContext context) {
     final color = switch (product.risk) {
-      StockRisk.critical => AppColors.danger,
+      StockRisk.critical => Theme.of(context).colorScheme.error,
       StockRisk.attention => AppColors.warning,
-      StockRisk.healthy => AppColors.brand,
+      StockRisk.healthy => Theme.of(context).colorScheme.primary,
     };
 
     return Card(
-      child: Padding(
-        padding: EdgeInsets.all(dense ? 13 : 16),
-        child: Row(
-          children: [
-            Container(
-              width: 42,
-              height: 42,
-              decoration: BoxDecoration(
-                color: color.withValues(alpha: 0.1),
-                borderRadius: BorderRadius.circular(12),
+      child: InkWell(
+        borderRadius: BorderRadius.circular(16),
+        onTap: () => _showDetails(context),
+        child: Padding(
+          padding: EdgeInsets.all(dense ? 13 : 16),
+          child: Row(
+            children: [
+              Container(
+                width: 42,
+                height: 42,
+                decoration: BoxDecoration(
+                  color: color.withValues(alpha: 0.1),
+                  borderRadius: BorderRadius.circular(12),
+                ),
+                child: Icon(Icons.inventory_2_outlined, color: color, size: 21),
               ),
-              child: Icon(Icons.inventory_2_outlined, color: color, size: 21),
-            ),
-            const SizedBox(width: 12),
-            Expanded(
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Text(
-                    product.name,
-                    maxLines: 1,
-                    overflow: TextOverflow.ellipsis,
-                    style: const TextStyle(fontWeight: FontWeight.w700),
-                  ),
-                  const SizedBox(height: 3),
-                  Text(
-                    '${product.sku} · ${product.category}',
-                    maxLines: 1,
-                    overflow: TextOverflow.ellipsis,
-                    style: const TextStyle(
-                      color: AppColors.muted,
-                      fontSize: 12,
-                    ),
-                  ),
-                  if (!dense) ...[
-                    const SizedBox(height: 8),
+              SizedBox(width: 12),
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
                     Text(
-                      'Estoque ${product.stock.toStringAsFixed(0)} · '
-                      'Previsão ${product.forecast.toStringAsFixed(0)} · '
-                      'Cobertura ${product.coverage.toStringAsFixed(0)} dias',
-                      style: const TextStyle(fontSize: 11.5),
+                      product.name,
+                      maxLines: 1,
+                      overflow: TextOverflow.ellipsis,
+                      style: TextStyle(fontWeight: FontWeight.w700),
                     ),
+                    SizedBox(height: 3),
+                    Text(
+                      '${product.sku} · ${product.category}',
+                      maxLines: 1,
+                      overflow: TextOverflow.ellipsis,
+                      style: TextStyle(
+                        color: Theme.of(context).colorScheme.onSurfaceVariant,
+                        fontSize: 12,
+                      ),
+                    ),
+                    if (!dense) ...[
+                      SizedBox(height: 8),
+                      Text(
+                        'Estoque ${product.stock.toStringAsFixed(0)} · '
+                        'Previsão ${product.forecast.toStringAsFixed(0)} · '
+                        '${product.coverage == 999 ? 'Cobertura sem referência' : 'Cobertura ${product.coverage.toStringAsFixed(0)} dias'}',
+                        style: TextStyle(fontSize: 11.5),
+                      ),
+                    ],
                   ],
-                ],
-              ),
-            ),
-            const SizedBox(width: 8),
-            Container(
-              padding: const EdgeInsets.symmetric(horizontal: 9, vertical: 5),
-              decoration: BoxDecoration(
-                color: color.withValues(alpha: 0.1),
-                borderRadius: BorderRadius.circular(999),
-              ),
-              child: Text(
-                product.severity,
-                style: TextStyle(
-                  color: color,
-                  fontWeight: FontWeight.w800,
-                  fontSize: 11,
                 ),
               ),
-            ),
-          ],
+              SizedBox(width: 8),
+              Container(
+                padding: EdgeInsets.symmetric(horizontal: 9, vertical: 5),
+                decoration: BoxDecoration(
+                  color: color.withValues(alpha: 0.1),
+                  borderRadius: BorderRadius.circular(999),
+                ),
+                child: Text(
+                  product.severity,
+                  style: TextStyle(
+                    color: color,
+                    fontWeight: FontWeight.w800,
+                    fontSize: 11,
+                  ),
+                ),
+              ),
+            ],
+          ),
         ),
       ),
     );

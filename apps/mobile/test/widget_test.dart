@@ -39,11 +39,25 @@ void main() {
     expect(find.byType(NavigationRail), findsOneWidget);
     expect(find.byType(NavigationBar), findsNothing);
     expect(find.text('Estoque Inteligente'), findsOneWidget);
-    expect(find.text('PostgreSQL'), findsOneWidget);
+    await tester.tap(find.byTooltip('Notificações'));
+    await tester.pumpAndSettle();
+    expect(find.text('Central de alertas'), findsOneWidget);
   });
 }
 
 class FakeInventoryRepository implements InventoryRepository {
+  @override
+  Future<DatasetInfo> getCurrentDataset() async => DatasetInfo(
+    license: 'CC BY 4.0',
+    version: 'test-v1',
+    fingerprint: 'abc123',
+    recordsRead: 100,
+    recordsAccepted: 90,
+    recordsRejected: 10,
+    quality: const {'duplicate': 10},
+    startedOn: DateTime(2009, 12, 1),
+    endedOn: DateTime(2011, 12, 9),
+  );
   final products = const [
     ProductSummary(
       id: '1',

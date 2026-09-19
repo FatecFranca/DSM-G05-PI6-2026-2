@@ -108,8 +108,8 @@ export function DemandChart({
           <ComposedChart data={data} margin={{ top: 22, right: 10, left: -22 }}>
             <defs>
               <linearGradient id="forecastArea" x1="0" y1="0" x2="0" y2="1">
-                <stop offset="0%" stopColor="#16a394" stopOpacity={0.18} />
-                <stop offset="100%" stopColor="#16a394" stopOpacity={0.01} />
+                <stop offset="0%" stopColor="var(--primary)" stopOpacity={0.18} />
+                <stop offset="100%" stopColor="var(--primary)" stopOpacity={0.01} />
               </linearGradient>
             </defs>
             <CartesianGrid stroke="var(--border)" strokeDasharray="3 3" vertical={false} />
@@ -119,7 +119,7 @@ export function DemandChart({
             <Area dataKey="upper" stroke="none" fill="url(#forecastArea)" connectNulls />
             <Area dataKey="lower" stroke="none" fill="var(--card)" fillOpacity={0.75} connectNulls />
             <Line dataKey="actual" stroke="var(--foreground)" strokeWidth={2.6} connectNulls />
-            <Line dataKey="forecast" stroke="#0c8d7d" strokeWidth={2.6} strokeDasharray="6 5" connectNulls />
+            <Line dataKey="forecast" stroke="var(--primary)" strokeWidth={2.6} strokeDasharray="6 5" connectNulls />
           </ComposedChart>
         </ResponsiveContainer>
       </div>

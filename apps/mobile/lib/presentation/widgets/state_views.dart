@@ -1,24 +1,47 @@
 import 'package:flutter/material.dart';
 
-import '../../core/theme/app_theme.dart';
-
 class LoadingView extends StatelessWidget {
   const LoadingView({super.key, this.label = 'Carregando dados...'});
-
   final String label;
-
   @override
   Widget build(BuildContext context) {
-    return Center(
-      child: Padding(
-        padding: const EdgeInsets.all(32),
-        child: Column(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            const CircularProgressIndicator(),
-            const SizedBox(height: 16),
-            Text(label, style: const TextStyle(color: AppColors.muted)),
-          ],
+    final color = Theme.of(context).colorScheme.surfaceContainerHighest;
+    return Semantics(
+      label: label,
+      liveRegion: true,
+      child: ExcludeSemantics(
+        child: SingleChildScrollView(
+          padding: const EdgeInsets.all(20),
+          child: TweenAnimationBuilder<double>(
+            tween: Tween(begin: 0.35, end: 1),
+            duration: MediaQuery.disableAnimationsOf(context)
+                ? Duration.zero
+                : const Duration(milliseconds: 700),
+            builder: (context, opacity, child) =>
+                Opacity(opacity: opacity, child: child),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  label,
+                  style: TextStyle(
+                    color: Theme.of(context).colorScheme.onSurfaceVariant,
+                  ),
+                ),
+                const SizedBox(height: 24),
+                for (final height in [32.0, 112.0, 112.0, 230.0]) ...[
+                  Container(
+                    height: height,
+                    decoration: BoxDecoration(
+                      color: color,
+                      borderRadius: BorderRadius.circular(16),
+                    ),
+                  ),
+                  const SizedBox(height: 16),
+                ],
+              ],
+            ),
+          ),
         ),
       ),
     );
@@ -35,36 +58,39 @@ class ErrorView extends StatelessWidget {
   Widget build(BuildContext context) {
     return Center(
       child: ConstrainedBox(
-        constraints: const BoxConstraints(maxWidth: 420),
+        constraints: BoxConstraints(maxWidth: 420),
         child: Padding(
-          padding: const EdgeInsets.all(24),
+          padding: EdgeInsets.all(24),
           child: Card(
             child: Padding(
-              padding: const EdgeInsets.all(24),
+              padding: EdgeInsets.all(24),
               child: Column(
                 mainAxisSize: MainAxisSize.min,
                 children: [
-                  const Icon(
+                  Icon(
                     Icons.cloud_off_rounded,
                     size: 42,
-                    color: AppColors.danger,
+                    color: Theme.of(context).colorScheme.error,
                   ),
-                  const SizedBox(height: 14),
-                  const Text(
+                  SizedBox(height: 14),
+                  Text(
                     'Não foi possível carregar',
                     style: TextStyle(fontWeight: FontWeight.w800, fontSize: 17),
                   ),
-                  const SizedBox(height: 7),
+                  SizedBox(height: 7),
                   Text(
                     message,
                     textAlign: TextAlign.center,
-                    style: const TextStyle(color: AppColors.muted, height: 1.4),
+                    style: TextStyle(
+                      color: Theme.of(context).colorScheme.onSurfaceVariant,
+                      height: 1.4,
+                    ),
                   ),
-                  const SizedBox(height: 18),
+                  SizedBox(height: 18),
                   FilledButton.icon(
                     onPressed: onRetry,
-                    icon: const Icon(Icons.refresh_rounded),
-                    label: const Text('Tentar novamente'),
+                    icon: Icon(Icons.refresh_rounded),
+                    label: Text('Tentar novamente'),
                   ),
                 ],
               ),
@@ -92,21 +118,23 @@ class EmptyView extends StatelessWidget {
   Widget build(BuildContext context) {
     return Center(
       child: Padding(
-        padding: const EdgeInsets.all(32),
+        padding: EdgeInsets.all(32),
         child: Column(
           mainAxisSize: MainAxisSize.min,
           children: [
-            Icon(icon, size: 42, color: AppColors.brand),
-            const SizedBox(height: 14),
+            Icon(icon, size: 42, color: Theme.of(context).colorScheme.primary),
+            SizedBox(height: 14),
             Text(
               title,
-              style: const TextStyle(fontWeight: FontWeight.w800, fontSize: 17),
+              style: TextStyle(fontWeight: FontWeight.w800, fontSize: 17),
             ),
-            const SizedBox(height: 6),
+            SizedBox(height: 6),
             Text(
               description,
               textAlign: TextAlign.center,
-              style: const TextStyle(color: AppColors.muted),
+              style: TextStyle(
+                color: Theme.of(context).colorScheme.onSurfaceVariant,
+              ),
             ),
           ],
         ),
