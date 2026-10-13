@@ -74,17 +74,17 @@ void main() {
                     textScaler: TextScaler.linear(width == 320 ? 1.3 : 1),
                     disableAnimations: width == 320,
                   ),
-                  child: child!,
+                  child: RepaintBoundary(
+                    key: const ValueKey('ux-capture'),
+                    child: child!,
+                  ),
                 ),
                 theme: AppTheme.light(),
                 darkTheme: AppTheme.dark(),
                 themeMode: controller.mode,
-                home: RepaintBoundary(
-                  key: const ValueKey('ux-capture'),
-                  child: HomeShell(
-                    repository: FakeInventoryRepository(
-                      simulated: mode == ThemeMode.dark,
-                    ),
+                home: HomeShell(
+                  repository: FakeInventoryRepository(
+                    simulated: mode == ThemeMode.dark,
                   ),
                 ),
               ),
@@ -93,18 +93,22 @@ void main() {
         );
         await tester.pumpAndSettle();
         expect(tester.takeException(), isNull);
-        if (width == 320) {
-          await tester.scrollUntilVisible(
-            find.textContaining(mode == ThemeMode.dark ? 'R\$' : '£').last,
-            200,
-            scrollable: find.byType(Scrollable).first,
-          );
-          await tester.pumpAndSettle();
-        }
-        expect(
-          find.textContaining(mode == ThemeMode.dark ? 'R\$' : '£'),
-          findsWidgets,
+        await capture(tester, 'inicio-${width.toInt()}-${mode.name}');
+        // O ListView constrói itens sob demanda. Não usar .first/.last no
+        // alvo: a busca precisa aceitar zero resultados antes da rolagem.
+        // Ancorar no valor evita confundir o KPI com o aviso de demonstração.
+        final stockValue = find.textContaining(
+          RegExp(mode == ThemeMode.dark ? r'^R\$\s' : r'^£\s'),
         );
+        await tester.scrollUntilVisible(
+          stockValue,
+          200,
+          scrollable: find.byType(Scrollable).first,
+        );
+        await tester.pumpAndSettle();
+        expect(stockValue, findsOneWidget);
+        expect(stockValue.hitTestable(), findsOneWidget);
+        expect(tester.takeException(), isNull);
         expect(find.text('Nível de serviço'), findsNothing);
         await capture(tester, 'dashboard-${width.toInt()}-${mode.name}');
         await tester.tap(find.text('Dados').last);
@@ -143,9 +147,11 @@ void main() {
           180,
           scrollable: find.byType(Scrollable).first,
         );
+        await capture(tester, 'produtos-${width.toInt()}-${mode.name}');
         await tester.tap(find.text('Café Torrado 500 g'));
         await tester.pumpAndSettle();
         expect(find.text('SKU'), findsOneWidget);
+        await capture(tester, 'detalhes-${width.toInt()}-${mode.name}');
         await tester.scrollUntilVisible(
           find.text('Fechar detalhes'),
           200,
