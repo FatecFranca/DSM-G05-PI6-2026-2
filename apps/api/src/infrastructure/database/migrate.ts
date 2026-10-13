@@ -12,6 +12,7 @@ const migrations = [
   ['004_stock_movements', 'migrations/004_stock_movements.sql'],
   ['005_warehouse_catalog', 'migrations/005_warehouse_catalog.sql'],
   ['006_public_dataset', 'migrations/006_public_dataset.sql'],
+  ['007_demo_dataset', 'migrations/007_demo_dataset.sql'],
 ] as const;
 
 const config = getConfig();

@@ -136,7 +136,7 @@ class _DashboardScreenState extends State<DashboardScreen> {
                 child: Padding(
                   padding: EdgeInsets.all(16),
                   child: Text(
-                    'ANÁLISE HISTÓRICA · Saldos iniciais e custos simulados. As projeções começam após o fim da base, não na data atual.'
+                    '${summary.meta.isSimulated ? 'DEMONSTRAÇÃO SIMULADA EM R\$ · Vendas e preços fictícios; não usar para compras reais.' : 'ANÁLISE HISTÓRICA · Saldos iniciais e custos simulados. As projeções começam após o fim da base, não na data atual.'}'
                     '${summary.meta.datasetPeriodEnd == null ? '' : ' Referência até ${DateFormat('dd/MM/yyyy').format(summary.meta.datasetPeriodEnd!.toUtc())}.'}',
                     style: TextStyle(height: 1.5),
                   ),
@@ -312,6 +312,8 @@ class _MetricsGrid extends StatelessWidget {
       name: kpis.stockValueCurrency,
       symbol: kpis.stockValueCurrency == 'GBP'
           ? '£ '
+          : kpis.stockValueCurrency == 'BRL'
+          ? 'R\$ '
           : '${kpis.stockValueCurrency} ',
       decimalDigits: 1,
     );

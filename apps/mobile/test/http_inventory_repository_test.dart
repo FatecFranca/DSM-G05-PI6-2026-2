@@ -76,6 +76,29 @@ void main() {
     repository.close();
   });
 
+  test('preserva a identificação simulada e moeda BRL', () async {
+    final repository = HttpInventoryRepository(
+      InventoryApiClient(
+        baseUri: Uri.parse('http://localhost:3333'),
+        httpClient: MockClient(
+          (request) async => http.Response(
+            _summaryJson
+                .replaceAll(
+                  '"source":"postgresql"',
+                  '"source":"postgresql","demo":true',
+                )
+                .replaceAll('GBP', 'BRL'),
+            200,
+          ),
+        ),
+      ),
+    );
+    final summary = await repository.getDashboardSummary();
+    expect(summary.meta.isSimulated, isTrue);
+    expect(summary.kpis.stockValueCurrency, 'BRL');
+    repository.close();
+  });
+
   test('envia horizonte como parâmetro da previsão', () async {
     final httpClient = MockClient((request) async {
       expect(request.url.queryParameters['horizon'], '30');

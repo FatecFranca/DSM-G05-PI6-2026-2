@@ -16,7 +16,7 @@ import { ProductApiClient } from '@/services/product-api-client';
 const api = new ProductApiClient();
 const empty = { sku: '', name: '', description: '', unit: 'UN', currency: 'BRL', costPrice: '0', salePrice: '0', minimumStock: '0', leadTimeDays: 0, active: true };
 const labels = { sku: 'SKU / código', name: 'Nome', unit: 'Unidade', costPrice: 'Custo', salePrice: 'Preço de venda', minimumStock: 'Estoque mínimo', leadTimeDays: 'Prazo de reposição (dias)' };
-const sources = { manual: 'Manual', csv: 'CSV', legacy: 'Base inicial', uci_online_retail: 'UCI Online Retail II' };
+const sources = { simulated: 'Simulado · R$', manual: 'Manual', csv: 'CSV', legacy: 'Base inicial', uci_online_retail: 'UCI Online Retail II' };
 const formatCurrency = (value, code) => new Intl.NumberFormat('pt-BR', { style: 'currency', currency: code || 'BRL' }).format(Number(value));
 
 function ProductEditor({ product, onClose, onSaved }) {

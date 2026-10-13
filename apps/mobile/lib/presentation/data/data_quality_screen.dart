@@ -100,8 +100,8 @@ class _DataQualityScreenState extends State<DataQualityScreen> {
                 children: [
                   Icon(Icons.dataset_outlined, color: colors.primary, size: 32),
                   const SizedBox(height: 14),
-                  const Text(
-                    'UCI Online Retail II',
+                  Text(
+                    data.name,
                     style: TextStyle(fontWeight: FontWeight.w800, fontSize: 20),
                   ),
                   const SizedBox(height: 8),
@@ -111,7 +111,10 @@ class _DataQualityScreenState extends State<DataQualityScreen> {
                   const SizedBox(height: 20),
                   for (final entry in {
                     'Registros lidos': data.recordsRead,
-                    'Vendas aceitas': data.recordsAccepted,
+                    (data.isSimulated
+                            ? 'Registros produto/dia'
+                            : 'Vendas aceitas'):
+                        data.recordsAccepted,
                     'Fora da demanda válida': data.recordsRejected,
                   }.entries)
                     Padding(
@@ -138,7 +141,9 @@ class _DataQualityScreenState extends State<DataQualityScreen> {
             child: Padding(
               padding: const EdgeInsets.all(20),
               child: Text(
-                'BASE HISTÓRICA\n\nSaldos, custos e prazos de reposição são simulados. Valores da fonte em GBP, sem conversão para reais. Dias sem venda não comprovam ausência de demanda. Customer ID não é armazenado.',
+                data.isSimulated
+                    ? 'DEMONSTRAÇÃO SIMULADA EM R\$\n\nVendas, preços e saldos iniciais fictícios. Não há conversão de GBP. A UCI original foi preservada. Não utilizar para decisões reais de compra.'
+                    : 'BASE HISTÓRICA\n\nSaldos, custos e prazos de reposição são simulados. Valores da fonte em GBP, sem conversão para reais. Dias sem venda não comprovam ausência de demanda. Customer ID não é armazenado.',
                 style: TextStyle(
                   color: colors.onSecondaryContainer,
                   height: 1.5,

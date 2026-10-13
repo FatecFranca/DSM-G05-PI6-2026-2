@@ -46,8 +46,14 @@ void main() {
 }
 
 class FakeInventoryRepository implements InventoryRepository {
+  FakeInventoryRepository({this.simulated = false});
+  final bool simulated;
   @override
   Future<DatasetInfo> getCurrentDataset() async => DatasetInfo(
+    name: simulated
+        ? 'Demonstração brasileira — dados simulados'
+        : 'UCI Online Retail II',
+    isSimulated: simulated,
     license: 'CC BY 4.0',
     version: 'test-v1',
     fingerprint: 'abc123',
@@ -100,10 +106,12 @@ class FakeInventoryRepository implements InventoryRepository {
   @override
   Future<DashboardSummary> getDashboardSummary() async => DashboardSummary(
     meta: DashboardMeta(
+      isSimulated: simulated,
       source: 'postgresql',
       lastSyncAt: DateTime(2026, 9, 10),
     ),
-    kpis: const DashboardKpis(
+    kpis: DashboardKpis(
+      stockValueCurrency: simulated ? 'BRL' : 'GBP',
       stockValue: 184000,
       activeProducts: 3,
       stockoutRisk: 2,

@@ -15,8 +15,8 @@ export class PostgresProductRepository implements ProductRepository {
       AND ($2='all' OR active=($2='active'))`;
     const params = [filter.search, filter.status];
     const [data, count] = await Promise.all([
-      this.db.query<CatalogProduct>(`SELECT ${columns} FROM products WHERE ${where} ORDER BY name,id LIMIT $3 OFFSET $4`, [...params, filter.pageSize, (filter.page - 1) * filter.pageSize]),
-      this.db.query<{ total: number }>(`SELECT count(*)::int AS total FROM products WHERE ${where}`, params),
+      this.db.query<CatalogProduct>(`SELECT ${columns} FROM operational_products WHERE ${where} ORDER BY name,id LIMIT $3 OFFSET $4`, [...params, filter.pageSize, (filter.page - 1) * filter.pageSize]),
+      this.db.query<{ total: number }>(`SELECT count(*)::int AS total FROM operational_products WHERE ${where}`, params),
     ]);
     return { data: data.rows, total: count.rows[0]!.total };
   }

@@ -1,0 +1,121 @@
+Sprint 2 — verificações executadas em 13/10/2026
+Branch: feature/dashboard-ux
+HEAD: 2a49829 + alterações locais não commitadas
+Destino: 127.0.0.1:5432/estoque_inteligente
+Não comprova implantação em nuvem ou envio de e-mail real.
+
+## database — passed
+
+> dsm-g05-pi6-2026-2@0.1.0 db:check
+> node scripts/check-database.mjs
+
+PostgreSQL conectado: { database: 'estoque_inteligente', username: 'gabriel', port: 5432 }
+
+## demo — passed
+
+> @estoque-inteligente/api@0.1.0 demo:verify
+> tsx test/demo.smoke.ts
+
+{
+  "summary": {
+    "stockValue": 1683541.45,
+    "stockValueCurrency": "BRL",
+    "activeProducts": 52,
+    "stockoutRisk": 14,
+    "serviceLevel": 100
+  },
+  "dataset": "Demonstração brasileira — dados simulados",
+  "periodEnd": "2026-09-19",
+  "records": 259104,
+  "originalProductsPreserved": 4737,
+  "forecasts": [
+    {
+      "horizon": 7,
+      "first": "2026-09-20",
+      "last": "2026-09-26",
+      "wape": 0.228933
+    },
+    {
+      "horizon": 30,
+      "first": "2026-09-20",
+      "last": "2026-10-19",
+      "wape": 0.228933
+    },
+    {
+      "horizon": 90,
+      "first": "2026-09-20",
+      "last": "2026-12-18",
+      "wape": 0.228933
+    }
+  ]
+}
+
+## integration — passed
+
+> @estoque-inteligente/api@0.1.0 test:integration
+> tsx test/run-integration.ts
+
+▶ Autenticação com PostgreSQL real
+  ✔ nega consulta de estoque sem sessão e bloqueia CSRF antes de cadastrar (226.5767ms)
+  ✔ valida senha e não aceita privilégios enviados pelo cliente (16.4861ms)
+  ✔ cadastra com e-mail normalizado, senha em hash e papel de consulta (114.6393ms)
+  ✔ não autentica senha errada nem SQL injection (85.8916ms)
+  ✔ inicia sessão com cookie HttpOnly e não revela o token no JSON (35.2104ms)
+  ✔ recuperação não revela conta e tokens antigos são invalidados (1862.5905ms)
+  ✔ consome recuperação uma única vez, mesmo concorrente, e revoga sessões (126.6671ms)
+  ✔ troca de senha exige senha atual e encerra a sessão (73.6594ms)
+  ✔ logout revoga no servidor; sessão expirada não funciona (30.1463ms)
+  ✔ recusa links expirados, contas desativadas e cookies adulterados (51.5605ms)
+  ✔ produção usa cookie Secure, fecha cadastro e protege Swagger (110.3163ms)
+  ✔ limita tentativas por conta no PostgreSQL e mantém auditoria (5.0153ms)
+✔ Autenticação com PostgreSQL real (7170.8568ms)
+▶ Catálogo com PostgreSQL real
+  ✔ exige sessão, papel admin e proteção CSRF para escrever (4.4455ms)
+  ✔ cadastra sem ERP e persiste produto, auditoria e evento juntos (20.6776ms)
+  ✔ busca paginada aceita viewer e trata SQL injection como texto (76.2731ms)
+  ✔ edição concorrente não sobrescreve silenciosamente; inativação preserva registro (7.8969ms)
+  ✔ prévia não grava; conflito no CSV desfaz o lote inteiro e sua outbox (22.8511ms)
+  ✔ importa CSV válido sem duplicar em reenvio e rejeita campos de saldo (8.7161ms)
+✔ Catálogo com PostgreSQL real (5078.6125ms)
+▶ Movimentações com PostgreSQL real
+  ✔ não soma previsões de versões antigas do modelo (145.3381ms)
+  ✔ protege leitura por sessão e escrita por papel e CSRF (4.1248ms)
+  ✔ cadastra um segundo depósito para habilitar transferências (57.8256ms)
+  ✔ registra entrada, saída e ajuste com histórico, auditoria e outbox (41.8553ms)
+  ✔ preserva reservas e serializa saídas concorrentes (13.7803ms)
+  ✔ transfere atomicamente entre depósitos e gera duas pernas ligadas (15.0396ms)
+  ✔ lista saldos paginados e trata tentativa de SQL injection como texto (5.6129ms)
+✔ Movimentações com PostgreSQL real (5236.3176ms)
+ℹ tests 25
+ℹ suites 3
+ℹ pass 25
+ℹ fail 0
+ℹ cancelled 0
+ℹ skipped 0
+ℹ todo 0
+ℹ duration_ms 11895.751
+
+## lint — passed
+
+> dsm-g05-pi6-2026-2@0.1.0 lint
+> npm run lint --workspaces --if-present
+
+
+> @estoque-inteligente/api@0.1.0 lint
+> eslint .
+
+
+> @estoque-inteligente/web@0.1.0 lint
+> eslint .
+
+
+## typecheck — passed
+
+> @estoque-inteligente/api@0.1.0 typecheck
+> tsc --noEmit
+
+
+## Mineração
+npm run test:ml
+12 testes descobertos; 11 aprovados, 1 integração PostgreSQL opcional ignorada.
+Aviso não fatal: joblib não detectou núcleos físicos e usou os lógicos.

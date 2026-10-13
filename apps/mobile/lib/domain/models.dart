@@ -13,6 +13,8 @@ enum StockRisk {
 
 class DatasetInfo {
   const DatasetInfo({
+    this.name = 'UCI Online Retail II',
+    this.isSimulated = false,
     required this.license,
     required this.version,
     required this.fingerprint,
@@ -23,6 +25,8 @@ class DatasetInfo {
     this.startedOn,
     this.endedOn,
   });
+  final String name;
+  final bool isSimulated;
   final String license, version, fingerprint;
   final int recordsRead, recordsAccepted, recordsRejected;
   final Map<String, int> quality;
@@ -50,8 +54,10 @@ class DashboardMeta {
     required this.source,
     required this.lastSyncAt,
     this.datasetPeriodEnd,
+    this.isSimulated = false,
   });
 
+  final bool isSimulated;
   final String source;
   final DateTime? lastSyncAt;
   final DateTime? datasetPeriodEnd;

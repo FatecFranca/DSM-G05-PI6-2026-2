@@ -1,5 +1,10 @@
 # Computação em Nuvem II — serviços e justificativas
 
+> Atualização em 13/10/2026: o ambiente intermediário será uma **VM na Azure**,
+> ainda não criada. Consulte [roteiro Azure](17-azure-vm-sprint-2.md).
+> A proposta Google Cloud abaixo é histórica, não evidência de recursos existentes.
+> O adaptador de mensageria Pub/Sub continua no código; não foi migrado para Azure.
+
 ## 1. Proposta
 
 A arquitetura alvo usa serviços gerenciados do **Google Cloud** e mantém o desenvolvimento local com contêineres. A escolha concentra API, processamento, banco, agendamento, artefatos e observabilidade em um provedor, reduzindo integrações operacionais na fase acadêmica.

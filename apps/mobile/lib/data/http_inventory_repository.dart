@@ -11,6 +11,8 @@ class HttpInventoryRepository implements InventoryRepository {
   Future<DatasetInfo> getCurrentDataset() async {
     final json = await _client.getJson('/api/v1/datasets/current');
     return DatasetInfo(
+      name: _string(json['name'], fallback: 'UCI Online Retail II'),
+      isSimulated: json['isSimulated'] == true,
       license: _string(json['license']),
       version: _string(json['version']),
       fingerprint: _string(json['fileSha256']),
@@ -33,6 +35,7 @@ class HttpInventoryRepository implements InventoryRepository {
 
     return DashboardSummary(
       meta: DashboardMeta(
+        isSimulated: meta['demo'] == true,
         source: _string(meta['source'], fallback: 'postgresql'),
         lastSyncAt: _dateTime(meta['lastSyncAt']),
         datasetPeriodEnd: _dateTime(meta['datasetPeriodEnd']),

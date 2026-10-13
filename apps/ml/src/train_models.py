@@ -36,12 +36,12 @@ def json_value(value: object) -> str:
     return json.dumps(value, ensure_ascii=False, default=lambda item: item.item() if hasattr(item, "item") else str(item))
 
 
-def load_dataset(connection: psycopg.Connection) -> tuple[DatasetVersion, pd.DataFrame]:
+def load_dataset(connection: psycopg.Connection, slug: str = DATASET_SLUG) -> tuple[DatasetVersion, pd.DataFrame]:
     row = connection.execute(
         """SELECT id::text,version,period_started_on,period_ended_on
            FROM dataset_versions WHERE slug=%s AND status='ready'
            ORDER BY imported_at DESC NULLS LAST LIMIT 1""",
-        (DATASET_SLUG,),
+        (slug,),
     ).fetchone()
     if not row:
         raise RuntimeError("A base ainda não foi carregada. Execute npm run data:load.")
@@ -66,7 +66,7 @@ def product_features(demand: pd.DataFrame, total_days: int) -> pd.DataFrame:
     grouped = demand.groupby(["product_id", "sku", "name"], as_index=False).agg(
         total_units=("units_sold", "sum"),
         revenue=("gross_revenue", "sum"),
-        active_days=("demand_date", "nunique"),
+        active_days=("units_sold", lambda values: int((values > 0).sum())),
         daily_mean_active=("units_sold", "mean"),
         daily_std_active=("units_sold", "std"),
         average_price=("gross_revenue", lambda values: float(values.sum())),
@@ -244,14 +244,20 @@ def persist_results(connection: psycopg.Connection, dataset: DatasetVersion, fea
 
 def main() -> None:
     parser = argparse.ArgumentParser(description="Treina modelos sobre o histórico identificado da base.")
+    parser.add_argument("--dataset", choices=[DATASET_SLUG, "demo-brl"], default=DATASET_SLUG)
     parser.add_argument("--evaluate-only", action="store_true", help="Grava artefatos e métricas, sem publicar no banco.")
     args = parser.parse_args()
-    artifact_directory = MODEL_DIRECTORY / ("evaluation-v2" if args.evaluate_only else "v2")
+    artifact_directory = MODEL_DIRECTORY.parent / args.dataset / ("evaluation-v2" if args.evaluate_only else "v2")
     artifact_directory.mkdir(parents=True, exist_ok=True)
     with psycopg.connect(database_url(), connect_timeout=10) as connection:
         if args.evaluate_only:
             connection.execute("SET TRANSACTION READ ONLY")
-        dataset, demand = load_dataset(connection)
+        dataset, demand = load_dataset(connection, args.dataset)
+        if args.dataset == "demo-brl":
+            # Keep recent regimes for training; the full generated history remains in PostgreSQL.
+            start = max(dataset.started_on, dataset.ended_on - timedelta(days=729))
+            demand = demand[demand.demand_date >= pd.Timestamp(start)].copy()
+            dataset = DatasetVersion(dataset.id, dataset.version, start, dataset.ended_on)
         days = (dataset.ended_on - dataset.started_on).days + 1
         features = product_features(demand, days)
         print(f"Treinando agrupamento para {len(features):,} produtos...")

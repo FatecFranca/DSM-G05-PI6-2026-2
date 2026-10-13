@@ -1,5 +1,10 @@
 # Alinhamento acadêmico do projeto
 
+> Auditoria da segunda sprint em 13/10/2026: consulte [matriz atual](16-sprint-2.md).
+> A nuvem escolhida passou a ser VM Azure, ainda pendente de criação. Métricas
+> e referências Google Cloud abaixo refletem etapas anteriores; não devem ser
+> usadas como evidência da implantação ou dos modelos atuais sem essa distinção.
+
 Este documento transforma os objetivos das três disciplinas em decisões técnicas e evidências verificáveis do **Estoque Inteligente**. A matriz também evita que algum requisito acadêmico fique implícito ou seja tratado apenas ao final do semestre.
 
 ## Objetivo geral

@@ -81,7 +81,11 @@ void main() {
                 themeMode: controller.mode,
                 home: RepaintBoundary(
                   key: const ValueKey('ux-capture'),
-                  child: HomeShell(repository: FakeInventoryRepository()),
+                  child: HomeShell(
+                    repository: FakeInventoryRepository(
+                      simulated: mode == ThemeMode.dark,
+                    ),
+                  ),
                 ),
               ),
             ),
@@ -91,19 +95,29 @@ void main() {
         expect(tester.takeException(), isNull);
         if (width == 320) {
           await tester.scrollUntilVisible(
-            find.textContaining('£'),
+            find.textContaining(mode == ThemeMode.dark ? 'R\$' : '£').last,
             200,
             scrollable: find.byType(Scrollable).first,
           );
           await tester.pumpAndSettle();
         }
-        expect(find.textContaining('£'), findsWidgets);
+        expect(
+          find.textContaining(mode == ThemeMode.dark ? 'R\$' : '£'),
+          findsWidgets,
+        );
         expect(find.text('Nível de serviço'), findsNothing);
         await capture(tester, 'dashboard-${width.toInt()}-${mode.name}');
         await tester.tap(find.text('Dados').last);
         await tester.pumpAndSettle();
         expect(find.text('Conheça seus dados.'), findsOneWidget);
-        expect(find.text('UCI Online Retail II'), findsOneWidget);
+        expect(
+          find.text(
+            mode == ThemeMode.dark
+                ? 'Demonstração brasileira — dados simulados'
+                : 'UCI Online Retail II',
+          ),
+          findsOneWidget,
+        );
         expect(tester.takeException(), isNull);
         await capture(tester, 'dados-${width.toInt()}-${mode.name}');
         await tester.tap(find.byTooltip('Tema da interface'));

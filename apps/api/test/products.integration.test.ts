@@ -30,7 +30,7 @@ describe('Catálogo com PostgreSQL real', { skip: process.env.AUTH_INTEGRATION !
     url.searchParams.set('options', `-c search_path=${schema}`);
     db = new PostgresDatabase(url.toString(), 5);
     for (const file of ['schema.sql', 'migrations/002_authentication.sql', 'migrations/003_product_catalog.sql',
-      'migrations/004_stock_movements.sql', 'migrations/005_warehouse_catalog.sql', 'migrations/006_public_dataset.sql']) {
+      'migrations/004_stock_movements.sql', 'migrations/005_warehouse_catalog.sql', 'migrations/006_public_dataset.sql', 'migrations/007_demo_dataset.sql']) {
       const sql = await readFile(new URL(`../../../infra/database/${file}`, import.meta.url), 'utf8');
       await db.query(sql.replace('CREATE EXTENSION IF NOT EXISTS pgcrypto;', ''));
     }

@@ -94,7 +94,7 @@ export function DemandChart({
         <div>
           <div className="title-with-badge">
             <h2>Demanda e previsão</h2>
-            <Badge variant="secondary">Projeção histórica</Badge>
+            <Badge variant="secondary">Projeção de demanda</Badge>
           </div>
           <p className="muted-copy">Histórico e projeção para {horizon} dias</p>
         </div>
@@ -235,7 +235,7 @@ function Dashboard({ user }) {
   const loading = summaryRequest.isLoading || forecastRequest.isLoading;
   const validating = summaryRequest.isValidating || forecastRequest.isValidating;
   const metrics = summary ? [
-    { label: "Valor em estoque", value: formatCurrency(summary.kpis.stockValue, summary.kpis.stockValueCurrency), trend: "Simulado", trendLabel: "base UCI em GBP", icon: Warehouse, tone: "teal", direction: "up" },
+    { label: "Valor em estoque", value: formatCurrency(summary.kpis.stockValue, summary.kpis.stockValueCurrency), trend: "Simulado", trendLabel: `valores em ${summary.kpis.stockValueCurrency}`, icon: Warehouse, tone: "teal", direction: "up" },
     { label: "Produtos ativos", value: String(summary.kpis.activeProducts), trend: "Cat\xE1logo", trendLabel: "itens monitorados", icon: Boxes, tone: "blue", direction: "up" },
     { label: "Risco de ruptura", value: String(summary.kpis.stockoutRisk), trend: "Prioridade", trendLabel: "reposi\xE7\xE3o necess\xE1ria", icon: AlertTriangle, tone: "red", direction: "down" },
     { label: "Horizonte de análise", value: "7 / 30 / 90", trend: "Dias", trendLabel: "após o fim do histórico", icon: TrendingUp, tone: "teal", direction: "up" }
@@ -262,7 +262,7 @@ function Dashboard({ user }) {
               </Button>
             </div>
           </section>
-          <div className="ux-context"><Sparkles size={18} /><span><strong>Análise histórica</strong> · Saldo inicial e custos simulados. Projeções relativas ao fim da base.</span><Link href="/dados">Entenda os dados ↗</Link></div>
+          <div className="ux-context"><Sparkles size={18} /><span><strong>{summary.meta.demo ? 'Demonstração simulada em R$' : 'Análise histórica'}</strong> · {summary.meta.demo ? 'Vendas e preços fictícios. Não usar para decisões reais de compra.' : 'Saldo inicial e custos simulados. Projeções relativas ao fim da base.'}</span><Link href="/dados">Entenda os dados ↗</Link></div>
           {error && <Alert variant="destructive"><AlertTriangle /><AlertTitle>Não foi possível atualizar os dados</AlertTitle><AlertDescription>Verifique a conexão e tente novamente pelo botão Atualizar.</AlertDescription></Alert>}
           {loading && !summary ? <DashboardSkeleton /> : summary && <>
               <section className="metrics-grid motion-stagger">{metrics.map((metric) => <MetricCard key={metric.label} metric={metric} />)}</section>
