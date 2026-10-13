@@ -33,7 +33,7 @@ export type ProductSummary = {
 export type DashboardSummary = {
   meta: {
     source: 'postgresql';
-    demo: false;
+    demo: boolean;
     generatedAt: string;
     lastSyncAt: string | null;
     dataset: string | null;
@@ -63,7 +63,8 @@ export type ProductList = {
 };
 
 export type ForecastResult = {
-  demo: false;
+  demo: boolean;
+  metrics?: Record<string, unknown>;
   productId: string | null;
   horizon: 7 | 30 | 90;
   model: string | null;
@@ -83,6 +84,8 @@ export type SyncRun = {
 export type SyncRunList = { data: SyncRun[]; total: number; demo: false };
 
 export type DatasetStatus = {
+  isSimulated?: boolean;
+  currency?: string;
   name: string;
   version: string;
   status: string;

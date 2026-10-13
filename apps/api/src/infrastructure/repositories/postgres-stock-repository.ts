@@ -17,8 +17,8 @@ export class PostgresStockRepository implements StockRepository {
 
   async options() {
     const [products, warehouses] = await Promise.all([
-      this.db.query<{ id: string; sku: string; name: string; unit: string }>('SELECT id,sku,name,unit FROM products WHERE active ORDER BY name,id'),
-      this.db.query<{ id: string; name: string }>('SELECT id,name FROM warehouses WHERE active ORDER BY name,id'),
+      this.db.query<{ id: string; sku: string; name: string; unit: string }>('SELECT id,sku,name,unit FROM operational_products WHERE active ORDER BY name,id'),
+      this.db.query<{ id: string; name: string }>('SELECT id,name FROM operational_warehouses WHERE active ORDER BY name,id'),
     ]);
     return { products: products.rows, warehouses: warehouses.rows };
   }
@@ -46,11 +46,11 @@ export class PostgresStockRepository implements StockRepository {
       AND ($2='' OR strpos(lower(p.name),lower($2))>0 OR strpos(lower(p.sku),lower($2))>0)`;
     const values = [filter.warehouseId ?? null, filter.search];
     const [data, count] = await Promise.all([
-      this.db.query<StockLevel>(`SELECT ${levelColumns} FROM products p CROSS JOIN warehouses w
+      this.db.query<StockLevel>(`SELECT ${levelColumns} FROM operational_products p CROSS JOIN operational_warehouses w
         LEFT JOIN inventory_levels l ON l.product_id=p.id AND l.warehouse_id=w.id
         WHERE ${where} ORDER BY p.name,w.name,p.id,w.id LIMIT $3 OFFSET $4`,
       [...values, filter.pageSize, (filter.page - 1) * filter.pageSize]),
-      this.db.query<{ total: number }>(`SELECT count(*)::int AS total FROM products p CROSS JOIN warehouses w WHERE ${where}`, values),
+      this.db.query<{ total: number }>(`SELECT count(*)::int AS total FROM operational_products p CROSS JOIN operational_warehouses w WHERE ${where}`, values),
     ]);
     return { data: data.rows, total: count.rows[0]!.total };
   }

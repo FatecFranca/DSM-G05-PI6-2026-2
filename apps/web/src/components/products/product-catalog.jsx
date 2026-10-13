@@ -2,8 +2,7 @@
 
 import Link from 'next/link';
 import { useEffect, useRef, useState } from 'react';
-import { ArrowLeft, Boxes, Download, LoaderCircle, PackageSearch, Plus, Search } from 'lucide-react';
-import { AccountMenu } from '@/components/auth/account-menu';
+import { Boxes, Download, LoaderCircle, PackageSearch, Plus, Search } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Card } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
@@ -17,7 +16,7 @@ import { ProductApiClient } from '@/services/product-api-client';
 const api = new ProductApiClient();
 const empty = { sku: '', name: '', description: '', unit: 'UN', currency: 'BRL', costPrice: '0', salePrice: '0', minimumStock: '0', leadTimeDays: 0, active: true };
 const labels = { sku: 'SKU / código', name: 'Nome', unit: 'Unidade', costPrice: 'Custo', salePrice: 'Preço de venda', minimumStock: 'Estoque mínimo', leadTimeDays: 'Prazo de reposição (dias)' };
-const sources = { manual: 'Manual', csv: 'CSV', legacy: 'Base inicial', uci_online_retail: 'UCI Online Retail II' };
+const sources = { simulated: 'Simulado · R$', manual: 'Manual', csv: 'CSV', legacy: 'Base inicial', uci_online_retail: 'UCI Online Retail II' };
 const formatCurrency = (value, code) => new Intl.NumberFormat('pt-BR', { style: 'currency', currency: code || 'BRL' }).format(Number(value));
 
 function ProductEditor({ product, onClose, onSaved }) {
@@ -135,10 +134,9 @@ export function ProductCatalog({ user }) {
   function refresh() { setLoading(true); setRevision((value) => value + 1); }
   function edit(product) { setEditor(product); setNotice(''); }
   return <main className="mx-auto max-w-6xl space-y-6 px-4 py-6 sm:px-8">
-    <div className="flex items-center justify-between"><Button variant="ghost" asChild><Link href="/"><ArrowLeft className="size-4" />Painel</Link></Button><AccountMenu user={user} /></div>
     <header className="flex flex-wrap items-center justify-between gap-4">
       <div><div className="mb-2 flex items-center gap-2 text-sm text-muted-foreground"><PackageSearch className="size-4" />CATÁLOGO</div>
-        <h1 className="text-3xl font-semibold tracking-tight">Produtos</h1><p className="mt-2 text-muted-foreground">Organize seu catálogo, mesmo sem um ERP conectado.</p></div>
+        <h1 className="text-3xl font-semibold tracking-tight">Seu catálogo, organizado.</h1><p className="mt-2 text-muted-foreground">Encontre produtos, acompanhe preços e importe seu catálogo por CSV.</p></div>
       <div className="flex gap-2"><Button variant="outline" asChild><Link href="/estoque"><Boxes className="size-4" />Estoque</Link></Button>{admin && <Button onClick={() => edit({})}><Plus className="size-4" />Novo produto</Button>}</div>
     </header>
     {!admin && <Alert><AlertDescription>Você tem acesso de consulta. Um administrador pode cadastrar, importar e editar produtos.</AlertDescription></Alert>}

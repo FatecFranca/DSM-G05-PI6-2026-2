@@ -9,6 +9,7 @@
     "start": "node dist/server.js",
     "build": "tsc -p tsconfig.build.json",
     "typecheck": "tsc --noEmit",
+    "demo:verify": "tsx test/demo.smoke.ts",
     "db:migrate": "tsx src/infrastructure/database/migrate.ts",
     "db:seed": "tsx src/infrastructure/database/seed.ts",
     "user:promote": "tsx src/infrastructure/database/promote-user.ts",

@@ -13,7 +13,13 @@ import type {
 } from '../../domain/models.js';
 import type { PostgresDatabase } from '../database/postgres-database.js';
 
-const classificationColors = { A: '#0c7767', B: '#d69e2e', C: '#7c8a96' } as const;
+const classificationColors = { A: '#3157d5', B: '#c18b28', C: '#8b98ad' } as const;
+
+// Select one run per active dataset: keeping older models must not multiply demand.
+const latestForecastRun = `SELECT candidate.id FROM model_runs candidate
+  WHERE candidate.task = 'forecast' AND candidate.status = 'succeeded'
+    AND candidate.dataset_version_id = mr.dataset_version_id
+  ORDER BY candidate.finished_at DESC NULLS LAST, candidate.created_at DESC, candidate.id DESC LIMIT 1`;
 
 function asNumber(value: string | number | null): number {
   return value === null ? 0 : Number(value);
@@ -73,6 +79,7 @@ const productProjection = `
     JOIN model_runs mr ON mr.id = df.model_run_id AND mr.status = 'succeeded'
     JOIN anchor a ON a.id = mr.dataset_version_id
     WHERE df.horizon_days = 30
+      AND mr.id = (${latestForecastRun})
       AND df.target_date BETWEEN a.day + 1 AND a.day + 30
     GROUP BY df.product_id
   ), projected AS (
@@ -96,7 +103,7 @@ const productProjection = `
           THEN 'attention'
         ELSE 'healthy'
       END AS risk
-    FROM products p
+    FROM operational_products p
     LEFT JOIN categories c ON c.id = p.category_id
     LEFT JOIN stock s ON s.product_id = p.id
     LEFT JOIN demand d ON d.product_id = p.id
@@ -122,7 +129,7 @@ export class PostgresInventoryRepository implements InventoryRepository {
         service_level: string;
       }>(`${productProjection}
         SELECT
-          COALESCE((SELECT SUM(il.available_quantity * COALESCE(p.cost_price, 0)) FROM inventory_levels il JOIN products p ON p.id = il.product_id WHERE p.active AND p.currency='GBP'), 0) AS stock_value,
+          COALESCE((SELECT SUM(il.available_quantity * COALESCE(p.cost_price, 0)) FROM inventory_levels il JOIN operational_products p ON p.id = il.product_id WHERE p.active AND p.currency=COALESCE((SELECT currency FROM dataset_versions WHERE status='ready' ORDER BY imported_at DESC NULLS LAST LIMIT 1),'BRL')), 0) AS stock_value,
           COUNT(*) AS active_products,
           COUNT(*) FILTER (WHERE risk = 'critical') AS stockout_risk,
           COALESCE((SELECT ROUND(100.0 * (1 - AVG(CASE WHEN d.was_stockout THEN 1 ELSE 0 END)), 1)
@@ -145,6 +152,7 @@ export class PostgresInventoryRepository implements InventoryRepository {
           JOIN model_runs mr ON mr.id = df.model_run_id AND mr.status = 'succeeded'
           JOIN anchor a ON a.id=mr.dataset_version_id
           WHERE horizon_days = 7 AND target_date BETWEEN a.day + 1 AND a.day + 7
+            AND mr.id = (${latestForecastRun})
           GROUP BY target_date
         )
         SELECT calendar.day::text, actual.quantity AS actual, predicted.quantity AS forecast,
@@ -175,8 +183,8 @@ export class PostgresInventoryRepository implements InventoryRepository {
       this.database.query<{ finished_at: Date | null }>(`
         SELECT finished_at FROM sync_runs WHERE status IN ('succeeded', 'partial') AND dataset_version_id IS NOT NULL
         ORDER BY finished_at DESC NULLS LAST LIMIT 1`),
-      this.database.query<{ version: string; period_ended_on: string | null }>(`
-        SELECT version,period_ended_on::text FROM dataset_versions WHERE status='ready'
+      this.database.query<{ version: string; period_ended_on: string | null; display_name: string; is_simulated: boolean; currency: string }>(`
+        SELECT version,period_ended_on::text,display_name,is_simulated,currency FROM dataset_versions WHERE status='ready'
         ORDER BY imported_at DESC NULLS LAST LIMIT 1`),
     ]);
 
@@ -200,15 +208,15 @@ export class PostgresInventoryRepository implements InventoryRepository {
     return {
       meta: {
         source: 'postgresql',
-        demo: false,
+        demo: dataset.rows[0]?.is_simulated ?? false,
         generatedAt: new Date().toISOString(),
         lastSyncAt: sync.rows[0]?.finished_at?.toISOString() ?? null,
-        dataset: dataset.rows[0]?.version ? `UCI Online Retail II (${dataset.rows[0].version})` : null,
+        dataset: dataset.rows[0]?.version ? `${dataset.rows[0].display_name} (${dataset.rows[0].version})` : null,
         datasetPeriodEnd: dataset.rows[0]?.period_ended_on ?? null,
       },
       kpis: {
         stockValue: asNumber(kpi?.stock_value ?? 0),
-        stockValueCurrency: 'GBP',
+        stockValueCurrency: dataset.rows[0]?.currency ?? 'BRL',
         activeProducts: asNumber(kpi?.active_products ?? 0),
         stockoutRisk: asNumber(kpi?.stockout_risk ?? 0),
         serviceLevel: asNumber(kpi?.service_level ?? 100),
@@ -278,6 +286,7 @@ export class PostgresInventoryRepository implements InventoryRepository {
         JOIN model_runs mr ON mr.id = df.model_run_id AND mr.status = 'succeeded'
         JOIN anchor a ON a.id=mr.dataset_version_id
         WHERE df.horizon_days = $2
+          AND mr.id = (${latestForecastRun})
           AND df.target_date BETWEEN a.day + 1 AND a.day + $2
           AND ($1::uuid IS NULL OR df.product_id = $1)
         GROUP BY target_date
@@ -290,13 +299,17 @@ export class PostgresInventoryRepository implements InventoryRepository {
         SELECT day, NULL, quantity, lower, upper FROM predicted
       ) points
       GROUP BY day ORDER BY day`, [productId ?? null, horizon]);
-    const model = await this.database.query<{ model_version: string; finished_at: Date | null }>(`
-      SELECT model_version, finished_at FROM model_runs
+    const model = await this.database.query<{ model_version: string; finished_at: Date | null; metrics: Record<string, unknown>; is_simulated: boolean }>(`
+      SELECT model_version, finished_at, metrics,
+        (SELECT is_simulated FROM dataset_versions WHERE id=dataset_version_id) AS is_simulated FROM model_runs
       WHERE task = 'forecast' AND status = 'succeeded'
-      ORDER BY finished_at DESC NULLS LAST, created_at DESC LIMIT 1`);
+        AND dataset_version_id = (SELECT id FROM dataset_versions WHERE status = 'ready'
+          ORDER BY imported_at DESC NULLS LAST LIMIT 1)
+      ORDER BY finished_at DESC NULLS LAST, created_at DESC, id DESC LIMIT 1`);
 
     return {
-      demo: false,
+      demo: model.rows[0]?.is_simulated ?? false,
+      metrics: model.rows[0]?.metrics ?? {},
       productId: productId ?? null,
       horizon,
       model: model.rows[0]?.model_version ?? null,
@@ -339,16 +352,19 @@ export class PostgresInventoryRepository implements InventoryRepository {
   public async getCurrentDataset(): Promise<DatasetStatus | null> {
     const result = await this.database.query<{
       slug: string; version: string; status: string; source_url: string; doi: string; license: string;
+      display_name: string; is_simulated: boolean; currency: string;
       file_sha256: string; records_read: string; records_accepted: string; records_rejected: string;
       period_started_on: string | null; period_ended_on: string | null; imported_at: Date | null;
       quality_summary: Record<string, unknown>;
-    }>(`SELECT slug,version,status,source_url,doi,license,file_sha256,records_read,records_accepted,
+    }>(`SELECT slug,display_name,is_simulated,currency,version,status,source_url,doi,license,file_sha256,records_read,records_accepted,
               records_rejected,period_started_on::text,period_ended_on::text,imported_at,quality_summary
          FROM dataset_versions WHERE status='ready' ORDER BY imported_at DESC NULLS LAST LIMIT 1`);
     const row = result.rows[0];
     if (!row) return null;
     return {
-      name: row.slug,
+      name: row.display_name,
+      isSimulated: row.is_simulated,
+      currency: row.currency,
       version: row.version,
       status: row.status,
       sourceUrl: row.source_url,

@@ -1,5 +1,13 @@
 # Primeira execução do projeto
 
+> No PC atual, a conexão passou para o PostgreSQL instalado, porta 5432.
+> Consulte [PostgreSQL do PC](18-postgresql-pc.md). `db:start` verifica a conexão;
+> os comandos da instância antiga dedicada são `db:legacy:start` e `db:legacy:stop`.
+> Não execute seed ou inicialização de outra instância para migrar dados existentes.
+
+Para a nova base simulada em R$ e previsões atualizadas, siga também
+[Demonstração em reais](15-demonstracao-em-reais.md), após preparar este ambiente.
+
 Este guia prepara uma máquina nova para executar API, Web, PostgreSQL, pipeline
 de dados, IA e Flutter. Os comandos abaixo usam PowerShell e devem ser
 executados na raiz do repositório.
@@ -220,6 +228,9 @@ O domínio de `MAIL_FROM` precisa estar autorizado pelo provedor. Nunca coloque 
 chave SMTP no Git, em prints ou na documentação.
 
 ## 8. Executar Mobile e Desktop
+
+Consulte também [Interface Flutter](13-interface-flutter.md) para temas,
+validação visual, APK de desenvolvimento e conexão por USB.
 
 Com a API funcionando:
 
