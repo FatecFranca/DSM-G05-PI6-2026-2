@@ -1,0 +1,52 @@
+EVIDÊNCIA SANITIZADA — APLICAÇÃO NA NUVEM — 18/10/2026
+
+Base implantada: commit a2f10693c175e9deeb2089815c262ce30b23f5b2,
+acrescido da correção local do seed que ainda deve ser commitada pelo grupo.
+
+Versões:
+- Node.js 22.23.2
+- npm 10.9.8
+- PostgreSQL 18 Alpine
+- Nginx 1.24.0 (Ubuntu)
+
+Validações de código na VM:
+- npm ci: concluído
+- lint API/web: aprovado
+- testes: 19 aprovados, 0 falhas
+- build API/web: aprovado
+
+Banco:
+- migrações aplicadas: 7
+- produtos do seed: 4
+- linhas de demanda: 120
+- previsões: 508
+- contêiner estoque-postgres: healthy
+- bind: 127.0.0.1:5433, sem exposição pública
+
+Teste funcional temporário, removido após a execução:
+- cadastro: HTTP 201
+- login: HTTP 200
+- dashboard autenticado: HTTP 200
+
+Teste externo a partir do computador administrativo:
+- http://4.229.233.225/login: HTTP 200
+- http://4.229.233.225/health: HTTP 200, banco connected
+- http://4.229.233.225/docs/: HTTP 200
+
+Teste de recuperação controlada:
+- PostgreSQL e serviços de aplicação reiniciados;
+- produtos antes do reinício: 4;
+- produtos depois do reinício: 4;
+- API, web e Nginx ativos; PostgreSQL healthy após a recuperação.
+
+Topologia:
+Internet -> Nginx :80 -> Next.js 127.0.0.1:3000
+                         Fastify 127.0.0.1:3333
+                         PostgreSQL 127.0.0.1:5433
+
+Limitação declarada: ambiente intermediário em HTTP. Ainda não há domínio,
+certificado TLS nem SMTP; portanto a API não foi declarada como produção.
+
+O npm audit reportou 21 ocorrências em dependências: 2 moderadas, 15 altas e
+4 críticas. Correção automática com breaking changes não foi aplicada antes da
+entrega; permanece necessária uma triagem controlada.

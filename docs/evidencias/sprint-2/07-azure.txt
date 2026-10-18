@@ -1,0 +1,33 @@
+EVIDÊNCIA SANITIZADA — AZURE VM — 18/10/2026
+
+Assinatura: Azure for Students
+Limite de gastos: On
+Grupo de recursos: PI5
+VM: servidor
+Região: Canada Central
+Tamanho: Standard_B2als_v2 (2 vCPU, 4 GiB)
+Sistema: Ubuntu Server 24.04 LTS
+IP público: 4.229.233.225
+Desligamento automático: 03:00 America/Sao_Paulo
+
+NSG validado:
+- SSH/TCP 22: permitido somente para 189.15.225.143/32
+- HTTP/TCP 80: público
+- HTTPS/TCP 443: público, reservado para TLS futuro
+- regra pública antiga Vitalis-API/TCP 3333: removida
+- PostgreSQL, Next.js e Fastify: sem porta pública
+
+UFW: ativo; entrada negada por padrão; OpenSSH e perfil Nginx permitidos.
+Serviços habilitados: estoque-api, estoque-web, nginx e Docker.
+
+Custos observados no Cost Management em 18/10/2026:
+- outubro: aproximadamente R$ 18,69 antes deste deploy;
+- origem observada: IP público e disco do recurso que já existia.
+
+Proteção de custo:
+- a VM existente foi reutilizada para evitar uma segunda cobrança;
+- spending limit da assinatura estava ativo;
+- auto-shutdown configurado;
+- desligar/desalocar a VM pelo portal depois da apresentação.
+
+Nenhuma chave privada, senha, cookie, token ou URL de banco consta neste arquivo.

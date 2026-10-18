@@ -12,7 +12,7 @@ validação executada e pendências; não substitui evidências reais.
 | Front-end parcialmente integrado | Next.js/JavaScript; autenticação, catálogo, estoque, dashboard e inteligência | sequência de telas mostrando cadastro, consulta e alteração |
 | Banco implementado e populado | PostgreSQL; migrações 001–007, UCI preservada e fonte simulada BRL | DBeaver com tabelas, contagens e consulta por dataset |
 | Commits de todos os integrantes | histórico local registra Gabriel, Alexandre, Dímerson e Uriel; alterações atuais ainda não commitadas | conferir contribuições efetivas da sprint, PRs e commits no GitHub |
-| Ambiente em nuvem criado | **Pendente.** Decisão atual: VM na Azure; criação será a última etapa da sprint | recurso criado, configuração, regras de rede e aplicação acessível |
+| Ambiente em nuvem criado | Azure VM validada em 18/10; Nginx, Next.js, Fastify e PostgreSQL 18 integrados | configuração sanitizada em `17-azure-vm-sprint-2.md`; ainda faltam os prints finais |
 | Coleta/tratamento e técnica de mineração | pipeline UCI; gerador sintético separado; K-Means, Random Forest e previsão temporal | origem/licença, regras, métricas, execução e resultados consultáveis |
 | Documentação intermediária | documentos 01–15 e este checklist | anexar prints atuais e logs sanitizados; não incluir credenciais |
 
@@ -41,18 +41,27 @@ Salvar em `docs/evidencias/sprint-2/` somente material sanitizado:
 - `04-mineracao.png`: fonte, período, métricas e agrupamentos.
 - `05-testes.txt`: saída dos testes com data e commit utilizado.
 - `06-github.png`: PRs e contribuições reais da equipe.
-- `07-azure.png`: VM criada e estado de execução, sem segredos.
-- `08-aplicacao-nuvem.png`: jornada funcionando no endereço implantado.
+- `07-azure.txt`: configuração sanitizada já coletada; complementar com
+  `07-azure.png` mostrando a VM ligada, sem segredos.
+- `08-aplicacao-nuvem.txt` e `08-aplicacao-nuvem.png`: validação técnica e
+  Swagger público já coletados; complementar com a jornada autenticada.
 
-O log `05-testes.txt` foi produzido nesta auditoria, e `consultas.sql` contém
-consultas somente leitura para preparar os prints do banco. Os demais arquivos
-acima são checklist, **não prints já produzidos**. Não criar prints fictícios
-nem atribuir commits a integrantes que não fizeram o trabalho.
+Os logs `05-testes.txt`, `07-azure.txt` e `08-aplicacao-nuvem.txt` foram
+produzidos nesta auditoria, e `consultas.sql` contém consultas somente leitura
+para preparar os prints do banco. Os PNGs continuam sendo checklist, **não
+prints já produzidos**. Não criar prints fictícios nem atribuir commits a
+integrantes que não fizeram o trabalho.
 
 Validação de 13/10/2026 no banco migrado: 25 testes de integração aprovados;
 verificação da demonstração, lint web/API e typecheck aprovados; 11 testes de
 mineração aprovados e 1 integração opcional ignorada. Não foi executado novo
 build Flutter nem teste visual ponta a ponta nesta auditoria.
+
+Validação na Azure em 18/10/2026: lint, 19 testes e build aprovados; sete
+migrações aplicadas; seed com 4 produtos, 120 registros de demanda e 508
+previsões; cadastro, login e dashboard autenticado aprovados; site, saúde e
+Swagger acessíveis externamente com HTTP 200. O ambiente é de homologação em
+HTTP e ainda não possui domínio, TLS ou SMTP.
 
 ## Cuidados antes da entrega
 

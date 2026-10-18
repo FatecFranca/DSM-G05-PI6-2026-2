@@ -8,9 +8,9 @@ INSERT INTO suppliers (id, external_id, name) VALUES
   ('11000000-0000-4000-8000-000000000001', 'fornecedor-demo-1', 'Distribuidora Modelo')
 ON CONFLICT (id) DO UPDATE SET name = EXCLUDED.name, updated_at = now();
 
-INSERT INTO warehouses (id, external_id, name) VALUES
-  ('30000000-0000-4000-8000-000000000001', 'deposito-principal', 'Depósito principal')
-ON CONFLICT (id) DO UPDATE SET name = EXCLUDED.name, updated_at = now();
+INSERT INTO warehouses (external_id, name) VALUES
+  ('deposito-principal', 'Depósito principal')
+ON CONFLICT (external_id) DO UPDATE SET name = EXCLUDED.name, updated_at = now();
 
 INSERT INTO products (
   id, external_id, sku, name, category_id, supplier_id, unit,
@@ -32,11 +32,18 @@ ON CONFLICT (id) DO UPDATE SET
 
 INSERT INTO inventory_levels (
   product_id, warehouse_id, on_hand_quantity, reserved_quantity, measured_at
-) VALUES
-  ('20000000-0000-4000-8000-000000000001', '30000000-0000-4000-8000-000000000001', 18, 4, now()),
-  ('20000000-0000-4000-8000-000000000002', '30000000-0000-4000-8000-000000000001', 50, 8, now()),
-  ('20000000-0000-4000-8000-000000000003', '30000000-0000-4000-8000-000000000001', 72, 4, now()),
-  ('20000000-0000-4000-8000-000000000004', '30000000-0000-4000-8000-000000000001', 34, 3, now())
+)
+SELECT inventory.product_id, warehouse.id, inventory.on_hand_quantity,
+  inventory.reserved_quantity, now()
+FROM (VALUES
+  ('20000000-0000-4000-8000-000000000001'::uuid, 18::numeric, 4::numeric),
+  ('20000000-0000-4000-8000-000000000002'::uuid, 50::numeric, 8::numeric),
+  ('20000000-0000-4000-8000-000000000003'::uuid, 72::numeric, 4::numeric),
+  ('20000000-0000-4000-8000-000000000004'::uuid, 34::numeric, 3::numeric)
+) AS inventory(product_id, on_hand_quantity, reserved_quantity)
+CROSS JOIN (
+  SELECT id FROM warehouses WHERE external_id = 'deposito-principal'
+) AS warehouse
 ON CONFLICT (product_id, warehouse_id) DO UPDATE SET
   on_hand_quantity = EXCLUDED.on_hand_quantity,
   reserved_quantity = EXCLUDED.reserved_quantity,

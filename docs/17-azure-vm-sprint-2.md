@@ -1,72 +1,106 @@
-# Azure VM — roteiro para o final da sprint 2
+# Azure VM — implantação da sprint 2
 
-Decisão do usuário em 13/10/2026: usar VM na Azure. **VM ainda não criada**;
-nenhum recurso pago foi provisionado nesta etapa. Este documento é preparação,
-não prova de implantação. A proposta anterior Google Cloud fica como histórico.
+Implantação intermediária executada e validada em **18/10/2026**. Para evitar
+um segundo custo na assinatura Azure for Students, foi reutilizada a VM
+`servidor`, do projeto anterior. O projeto Vitalis foi parado somente depois de
+um backup verificável; seus contêineres, volume e arquivos não foram excluídos.
 
-## Topologia intermediária proposta
+## Ambiente implantado
 
-Uma VM Linux Ubuntu Server com web Next.js, API Fastify e PostgreSQL local.
-Proxy reverso com HTTPS na frente dos serviços; banco sem porta pública.
-Processos supervisionados por systemd ou contêineres, não terminais de desenvolvimento.
-Treinamento inicialmente executado separadamente; publicar artefatos/resultados
-identificados, sem exigir treinamento concorrente com as requisições da aplicação.
+| Item | Configuração validada |
+| --- | --- |
+| Assinatura | Azure for Students, limite de gastos ativo |
+| Grupo de recursos | `PI5` |
+| VM | `servidor` |
+| Região | Canada Central |
+| Tamanho | `Standard_B2als_v2`, 2 vCPU e 4 GiB |
+| Sistema | Ubuntu Server 24.04 LTS |
+| Node.js / npm | 22.23.2 / 10.9.8 |
+| Banco | PostgreSQL 18 Alpine em contêiner Docker |
+| Proxy | Nginx na porta pública 80 |
+| Endereço | `http://4.229.233.225` |
+| Saúde da API | `http://4.229.233.225/health` |
+| OpenAPI/Swagger | `http://4.229.233.225/docs/` |
 
-Uma VM é ponto único de falha. Reiniciar um processo não equivale a alta
-disponibilidade. Evolução futura: múltiplas instâncias, balanceamento e banco
-gerenciado redundante, com orçamento e validação específicos.
+O site Next.js escuta apenas em `127.0.0.1:3000`, a API Fastify apenas em
+`127.0.0.1:3333` e o PostgreSQL apenas em `127.0.0.1:5433`. O Nginx é o único
+ponto público da aplicação. API e web são serviços `systemd`; o banco usa
+`restart=unless-stopped`. Todos foram habilitados para iniciar com a VM.
 
-## Antes de criar
+## Segurança e rede
 
-- Conferir assinatura, créditos estudantis, região, cotas e estimativa de custo.
-- Escolher capacidade após observar memória/disco do build, PostgreSQL e ML.
-- Definir grupo de recursos do projeto, responsável e limite de orçamento.
-- Autenticar SSH por chave; nunca commitar chave privada, `.env` ou backup.
-- Não reutilizar a senha local divulgada no chat. Criar credenciais fortes e
-  distintas; aplicação sem superusuário e usuário de migração separado.
+O NSG permite HTTP 80 para a demonstração, reserva HTTPS 443 e restringe SSH 22
+ao IP administrativo observado na implantação. A antiga regra pública
+`Vitalis-API`, porta 3333, foi removida. Não há regras públicas para 3000, 3333,
+5432 ou 5433. O UFW também está ativo com política de negar entrada por padrão.
 
-## Portal e rede
+O acesso administrativo usa chave Ed25519; a chave privada não está no
+repositório. As variáveis de ambiente ficam em `/etc/estoque-inteligente`, com
+permissão `0640`, e não foram impressas nas evidências. O banco usa uma senha
+aleatória e uma role de aplicação separada do superusuário do contêiner.
 
-No portal Azure: Virtual machines → Create → Azure virtual machine. Escolher
-Ubuntu Server compatível, assinatura/grupo/região e chave SSH. Revisar o custo
-antes de confirmar. Procedimento oficial: [criar VM Linux](https://learn.microsoft.com/azure/virtual-machines/linux/quick-create-portal?tabs=ubuntu).
+Esta é uma **homologação acadêmica intermediária**, servida por HTTP. A API roda
+explicitamente em modo de desenvolvimento com e-mail gravado em arquivo porque
+o grupo ainda não forneceu domínio, certificado e SMTP. Não se declarou
+`NODE_ENV=production`: o próprio projeto exige HTTPS e SMTP real nesse modo.
+Antes de tratar o ambiente como produção, configurar domínio, TLS, SMTP,
+desativar cadastro público e revisar cookies, CORS, logs e backup externo.
 
-Configurar NSG: SSH 22 restrito ao IP administrativo, HTTPS 443 para usuários
-e HTTP 80 somente para redirecionamento/emissão de certificado, quando necessário.
-Não publicar 5432, 3000 ou 3333. As regras do NSG filtram tráfego de entrada e
-saída: [documentação Microsoft](https://learn.microsoft.com/en-us/azure/virtual-network/network-security-groups-overview).
+## Dados e validação
 
-## Implantação a executar após a criação
+Foram aplicadas as sete migrações e a carga técnica corrigida. Na validação, o
+banco continha 4 produtos, 120 linhas de demanda e 508 previsões. O seed revelou
+e permitiu corrigir um conflito com o depósito criado pela migração 004.
 
-1. Atualizar o sistema, configurar firewall e usuário não-root.
-2. Instalar versões compatíveis de Node.js e PostgreSQL, conforme `package.json`
-   e versão do backup. Não restaurar dump PostgreSQL 18 em versão antiga sem validar.
-3. Transferir código de um commit revisado; instalar com `npm ci` e executar build.
-4. Criar banco vazio dedicado; restaurar backup sanitizado ou carregar dados
-   de demonstração. Não levar sessões ativas/usuários pessoais para a nuvem.
-5. Configurar segredos locais com permissões restritas; não imprimir URLs com senha.
-6. Configurar domínio e TLS, proxy reverso e processos supervisionados.
-7. API: `NODE_ENV=production`, `WEB_URL` e `CORS_ORIGIN` com HTTPS; SMTP válido,
-   remetente verificado e `REGISTRATION_ENABLED` definido intencionalmente.
-   O código exige SMTP e HTTPS em produção; não contornar essa validação.
-8. Configurar a URL interna usada pelo proxy Next.js e a URL HTTPS da API no
-   Flutter. Confirmar cookies Secure, CSRF, CORS e recuperação de senha.
-9. Executar migrações e verificar saúde, login, CRUD e persistência após reinício.
-10. Definir backup externo à VM, testar restauração e revisar logs sem segredos.
+No commit-base `a2f1069`, executaram com sucesso:
 
-Os comandos específicos de implantação serão definidos após informar VM,
-sistema operacional, domínio e forma de execução. Não há deploy automático pronto
-nem VM validada neste roteiro.
+- `npm ci`, lint de API/web, 19 testes não integrados e build de produção;
+- saúde da API com banco conectado;
+- cadastro temporário, login e consulta autenticada do dashboard;
+- acesso externo ao site, `/health` e `/docs/`, todos com HTTP 200;
+- reinício controlado de banco/API/web, preservando os 4 produtos do seed.
 
-## Mensageria
+O `npm audit` informou 21 ocorrências em dependências (2 moderadas, 15 altas e
+4 críticas). Não foi usado `npm audit fix --force`, pois isso pode introduzir
+mudanças incompatíveis antes da entrega. A triagem e atualização controlada das
+dependências permanecem como pendência técnica.
 
-O código atual usa outbox e adaptador Google Pub/Sub. Mover a API para uma VM
-Azure **não converte esse adaptador para Azure Service Bus**. Antes da prova de
-mensageria, decidir entre manter Pub/Sub com credenciais próprias ou implementar
-e testar outro adaptador. Não marcar mensageria Azure como implementada.
+## Preservação do Vitalis
 
-## Evidências finais
+O backup está em
+`/home/MerlinTroll/backups/vitalis-20261018T170441Z` e contém dump completo do
+PostgreSQL, código sem `node_modules`, arquivos Compose, unidade `systemd`,
+inspeção dos contêineres e `SHA256SUMS`. O dump passou em `gzip -t`. Os
+contêineres `vitalis-postgres` e `vitalis-ml` estão parados com reinício
+automático desabilitado, e o volume `vitalis_vitalis_pg_data` foi preservado.
 
-Registrar VM em execução, sistema/região/capacidade, NSG sem banco público,
-aplicação HTTPS, testes de uma jornada e recuperação após reinício. Documentar
-custos observados e limitações. Não expor chaves, cookies ou credenciais nos prints.
+## Custo e operação
+
+Na consulta de 18/10/2026, a assinatura estava com `spendingLimit: On`. O Cost
+Management mostrava aproximadamente **R$ 18,69** em outubro, referentes ao IP
+público e ao disco já existentes, antes deste deploy. A referência pública de
+varejo consultada para a VM `Standard_B2als_v2` em Canada Central era cerca de
+**R$ 0,2182 por hora** de computação, sujeita à cobrança real da assinatura.
+
+O desligamento automático está habilitado para **03:00 no horário de São Paulo**.
+Antes da apresentação, ligar a VM no portal e confirmar os três endereços acima.
+Desligar pelo portal com desalocação ao terminar; desligar apenas dentro do Linux
+pode continuar reservando capacidade e gerando cobrança.
+
+Comando de acesso, sem expor a chave:
+
+```powershell
+ssh -i "$env:USERPROFILE\.ssh\azure_servidor_pi6_ed25519" MerlinTroll@4.229.233.225
+```
+
+Comandos úteis dentro da VM:
+
+```bash
+sudo systemctl status estoque-api estoque-web nginx
+sudo docker ps --filter name=estoque-postgres
+sudo journalctl -u estoque-api -u estoque-web --since today
+curl http://127.0.0.1/health
+```
+
+Uma VM continua sendo ponto único de falha. A entrega demonstra ambiente em
+nuvem, integração e configuração inicial; não demonstra alta disponibilidade.
