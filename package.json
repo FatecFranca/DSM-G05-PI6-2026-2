@@ -30,6 +30,7 @@
     "data:demo": "node scripts/run-python.mjs -m apps.ml.src.simulate_dataset",
     "ml:demo": "node scripts/run-python.mjs -m apps.ml.src.train_models --dataset demo-brl",
     "ml:train": "node scripts/run-python.mjs -m apps.ml.src.train_models",
+    "ml:study": "node scripts/run-python.mjs -m apps.ml.src.preprocessing_study",
     "data:setup": "npm run db:migrate && npm run data:download && npm run data:load && npm run ml:train",
     "test:ml": "node scripts/run-python.mjs -m unittest discover -s apps/ml/tests -p test_*.py",
     "mobile": "cd apps/mobile && flutter run",
