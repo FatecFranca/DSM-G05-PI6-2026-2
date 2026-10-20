@@ -116,8 +116,12 @@ export class PostgresInventoryRepository implements InventoryRepository {
   public constructor(private readonly database: PostgresDatabase) {}
 
   public async healthCheck(): Promise<boolean> {
-    const result = await this.database.query<{ healthy: boolean }>('SELECT true AS healthy');
-    return result.rows[0]?.healthy === true;
+    try {
+      const result = await this.database.query<{ healthy: boolean }>('SELECT true AS healthy');
+      return result.rows[0]?.healthy === true;
+    } catch {
+      return false;
+    }
   }
 
   public async getDashboardSummary(): Promise<DashboardSummary> {

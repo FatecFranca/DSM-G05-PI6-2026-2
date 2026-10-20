@@ -25,14 +25,18 @@ export async function registerRoutes(
     schema: {
       tags: ['System'],
       summary: 'Verifica a API e a conexão com o banco',
-      response: successResponse,
+      response: { ...successResponse, 503: successResponse[200] },
     },
-  }, async () => ({
-    status: 'ok',
-    service: 'estoque-inteligente-api',
-    database: (await service.healthCheck()) ? 'connected' : 'unavailable',
-    timestamp: new Date().toISOString(),
-  }));
+  }, async (_request, reply) => {
+    const databaseHealthy = await service.healthCheck();
+    if (!databaseHealthy) { reply.code(503); }
+    return {
+      status: databaseHealthy ? 'ok' : 'degraded',
+      service: 'estoque-inteligente-api',
+      database: databaseHealthy ? 'connected' : 'unavailable',
+      timestamp: new Date().toISOString(),
+    };
+  });
 
   app.get('/api/v1/dashboard/summary', {
     schema: {

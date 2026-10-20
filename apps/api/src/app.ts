@@ -44,19 +44,11 @@ export async function buildApp(options: BuildAppOptions = {}) {
     redact: ['req.headers.cookie', 'req.headers.authorization', 'res.headers["set-cookie"]'],
   } : false });
 
-  let database: PostgresDatabase | undefined;
-  const repository = options.repository ?? (() => {
-    database = new PostgresDatabase(config.databaseUrl, config.databasePoolMax);
-    return new PostgresInventoryRepository(database);
-  })();
-  const service = new InventoryService(repository);
-  if (!database) { database = new PostgresDatabase(config.databaseUrl, config.databasePoolMax); }
-  const authService = new AuthService(options.authRepository ?? new PostgresAuthRepository(database!),
+  const database = new PostgresDatabase(config.databaseUrl, config.databasePoolMax);
+  app.addHook('onClose', async () => database.close());
+  const service = new InventoryService(options.repository ?? new PostgresInventoryRepository(database));
+  const authService = new AuthService(options.authRepository ?? new PostgresAuthRepository(database),
     options.mailer ?? new ConfiguredResetMailer(config), config.webUrl, config.registrationEnabled);
-
-  if (database) {
-    app.addHook('onClose', async () => database?.close());
-  }
 
   await app.register(helmet, { contentSecurityPolicy: false });
   await app.register(cookie);
