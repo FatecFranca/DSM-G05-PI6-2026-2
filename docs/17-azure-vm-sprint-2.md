@@ -67,6 +67,13 @@ dependências permanecem como pendência técnica.
 
 ## Preservação do Vitalis
 
+## Mensageria Azure Service Bus
+
+O código atual usa outbox e adaptador Azure Service Bus. Antes da prova de
+mensageria, configure identidade gerenciada na VM com permissão de envio no
+namespace e valide o tópico e a DLQ. A implantação reproduzível está em
+`infra/azure/service-bus.bicep`.
+
 O backup está em
 `/home/MerlinTroll/backups/vitalis-20261018T170441Z` e contém dump completo do
 PostgreSQL, código sem `node_modules`, arquivos Compose, unidade `systemd`,

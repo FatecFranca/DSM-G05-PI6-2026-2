@@ -99,6 +99,7 @@ class _EstoqueInteligenteAppState extends State<EstoqueInteligenteApp>
                   return HomeShell(
                     key: ValueKey(_auth.user!.id),
                     repository: _repository,
+                    api: _api,
                     userName: _auth.user!.name,
                     userRole: _auth.user!.role,
                     accountPage: AuthScreen(

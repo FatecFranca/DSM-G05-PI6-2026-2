@@ -26,7 +26,7 @@ Na mesma transação do saldo são persistidos:
 2. a ação em `audit_logs`;
 3. um evento em `outbox_events`.
 
-Os eventos são `stock.entry`, `stock.exit`, `stock.adjustment` e `stock.transferred`. O worker da outbox os serializa em Protocol Buffers e publica no Google Pub/Sub sem o risco de confirmar o saldo e perder o evento. As duas pernas de uma transferência compartilham o mesmo `transfer_id`.
+Os eventos são `stock.entry`, `stock.exit`, `stock.adjustment` e `stock.transferred`. O worker da outbox os serializa em Protocol Buffers e publica no Azure Service Bus sem o risco de confirmar o saldo e perder o evento. As duas pernas de uma transferência compartilham o mesmo `transfer_id`. A configuração está documentada em [Mensageria na Azure](19-mensageria-azure.md).
 
 ## Origem e simulação
 

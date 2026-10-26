@@ -56,7 +56,7 @@ flowchart TB
         api[API REST\nNode.js + Fastify + TypeScript]
         integration[Worker de integração\nPython em Cloud Run Job]
         ml[Worker de dados e ML\nPython em Cloud Run Job]
-        broker{{Pub/Sub\nmensagens Protobuf}}
+        broker{{Azure Service Bus\nmensagens Protobuf}}
     end
 
     subgraph data[Dados]
@@ -99,7 +99,7 @@ flowchart TB
 | Mobile | consultas e alertas prioritários | Flutter 3.41+ para Android e iOS |
 | Desktop | jornadas principais em telas grandes | Flutter para Windows, com layout adaptativo |
 | Pipeline | ingestão, qualidade, atributos, treino e inferência | Python, bibliotecas de dados e execução em lote |
-| Broker | desacoplar comandos e eventos entre serviços | Pub/Sub por gRPC/HTTPS, esquema Protobuf e DLQ |
+| Broker | desacoplar comandos e eventos entre serviços | Azure Service Bus, tópico/assinaturas, esquema Protobuf e DLQ |
 | PostgreSQL | fonte operacional consolidada | esquema relacional, integridade e resultados publicados |
 | Cloud Storage | lago de dados e artefatos | Parquet particionado por data/fonte, objetos versionados e criptografados |
 | BigQuery | histórico analítico e preparação em escala | tabelas particionadas e clusterizadas, cobrança por consulta controlada |
@@ -117,7 +117,7 @@ flowchart TB
 | `inventory.alert.generated.v1` | worker de alertas | notificações e auditoria | distribuir risco de ruptura calculado |
 | `inventory.dead-letter.v1` | assinaturas com falha | operador/reprocessador | preservar mensagens não processadas |
 
-O transporte gerenciado será Google Pub/Sub. Publicação e consumo interno podem usar gRPC; assinaturas push usam HTTPS. Os payloads seguem Protocol Buffers e o envelope comum definido em [`../infra/messaging/inventory_events.proto`](../infra/messaging/inventory_events.proto).
+O transporte gerenciado será Azure Service Bus. O tópico distribui eventos para assinaturas independentes; os payloads seguem Protocol Buffers e o envelope comum definido em [`../infra/messaging/inventory_events.proto`](../infra/messaging/inventory_events.proto). A decisão e a implantação reproduzível estão em [`19-mensageria-azure.md`](19-mensageria-azure.md).
 
 ### Garantias adotadas
 
@@ -136,7 +136,7 @@ O transporte gerenciado será Google Pub/Sub. Publicação e consumo interno pod
 sequenceDiagram
     autonumber
     participant S as Agendador
-    participant Q as Pub/Sub
+    participant Q as Azure Service Bus
     participant W as Pipeline
     participant B as UCI / Object Storage
     participant DB as PostgreSQL

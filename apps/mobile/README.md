@@ -4,7 +4,12 @@ Cliente Flutter adaptativo conectado à mesma API usada pelo Next.js. Em telas
 móveis usa navegação inferior; em desktop usa navegação lateral. A entrega atual
 inclui dashboard, indicadores, previsão por horizonte, classificação ABC,
 catálogo com busca/filtro, central de alertas e estados de carregamento, vazio e
-erro.
+erro. Administradores também têm a tela **Movimentar**, com entrada/saída,
+seleção de depósito e leitura de QR Code para localizar o SKU.
+
+O leitor usa a câmera nativa com `mobile_scanner`. Em Android, a permissão de
+câmera está declarada no manifesto; em iOS, adicione a chave
+`NSCameraUsageDescription` antes de compilar para um dispositivo Apple.
 
 ## Autenticação
 

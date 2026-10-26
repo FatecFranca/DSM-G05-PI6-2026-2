@@ -1,8 +1,8 @@
 'use client';
 
 import Link from 'next/link';
-import { useEffect, useState } from 'react';
-import { ArrowDownToLine, ArrowRightLeft, ArrowUpFromLine, Boxes, LoaderCircle, Search, SlidersHorizontal } from 'lucide-react';
+import { useEffect, useRef, useState } from 'react';
+import { ArrowDownToLine, ArrowRightLeft, ArrowUpFromLine, Boxes, Camera, LoaderCircle, Search, SlidersHorizontal, X } from 'lucide-react';
 import { Alert, AlertDescription } from '@/components/ui/alert';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
@@ -26,12 +26,83 @@ function OptionSelect({ value, onValueChange, options, placeholder, disabled, la
   </Select>;
 }
 
+function QrScanner({ open, onClose, onScan }) {
+  const videoRef = useRef(null);
+  const [message, setMessage] = useState('Solicitando acesso à câmera…');
+  const [manualCode, setManualCode] = useState('');
+
+  useEffect(() => {
+    if (!open) return undefined;
+    const video = videoRef.current;
+    let stream;
+    let timer;
+    let disposed = false;
+    async function start() {
+      if (!navigator.mediaDevices?.getUserMedia) {
+        setMessage('Seu navegador não oferece acesso à câmera. Informe o SKU abaixo.');
+        return;
+      }
+      if (!('BarcodeDetector' in window)) {
+        setMessage('A leitura automática não é suportada neste navegador. Informe o SKU abaixo.');
+        return;
+      }
+      try {
+        stream = await navigator.mediaDevices.getUserMedia({ video: { facingMode: { ideal: 'environment' } } });
+        if (disposed || !video) return;
+        video.srcObject = stream;
+        await video.play();
+        const Detector = window.BarcodeDetector;
+        const detector = new Detector({ formats: ['qr_code'] });
+        timer = window.setInterval(async () => {
+          if (video.readyState < 2) return;
+          try {
+            const codes = await detector.detect(video);
+            if (codes[0]?.rawValue) onScan(codes[0].rawValue);
+          } catch { /* câmera pode estar entre frames */ }
+        }, 250);
+        setMessage('Aponte a câmera para o QR Code do produto.');
+      } catch {
+        setMessage('Não foi possível acessar a câmera. Verifique a permissão ou informe o SKU abaixo.');
+      }
+    }
+    void start();
+    return () => {
+      disposed = true;
+      if (timer) window.clearInterval(timer);
+      stream?.getTracks().forEach((track) => track.stop());
+      if (video) video.srcObject = null;
+    };
+  }, [open, onScan]);
+
+  if (!open) return null;
+  return <div className="fixed inset-0 z-50 grid place-items-center bg-slate-950/70 p-4" role="dialog" aria-modal="true" aria-label="Ler QR Code">
+    <Card className="w-full max-w-md overflow-hidden p-0 shadow-2xl">
+      <div className="flex items-center justify-between border-b px-5 py-4"><div><h2 className="font-semibold">Ler QR Code</h2><p className="text-sm text-muted-foreground">Selecione o produto automaticamente</p></div><Button type="button" variant="ghost" size="icon" onClick={onClose} aria-label="Fechar leitor"><X className="size-5" /></Button></div>
+      <div className="space-y-4 p-5"><div className="relative aspect-square overflow-hidden rounded-xl bg-slate-950"><video ref={videoRef} className="h-full w-full object-cover" muted playsInline aria-label="Prévia da câmera" /><div className="pointer-events-none absolute inset-10 rounded-2xl border-2 border-white/80 shadow-[0_0_0_999px_rgba(2,6,23,.36)]" /></div>
+        <p className="text-sm text-muted-foreground">{message}</p><div className="flex gap-2"><Input value={manualCode} onChange={(event) => setManualCode(event.target.value)} placeholder="SKU ou identificador do produto" aria-label="SKU do produto" /><Button type="button" variant="outline" disabled={!manualCode.trim()} onClick={() => onScan(manualCode.trim())}>Usar</Button></div>
+      </div>
+    </Card>
+  </div>;
+}
+
 function MovementForm({ options, onDone }) {
   const [type, setType] = useState('entry');
   const [productId, setProductId] = useState(''); const [warehouseId, setWarehouseId] = useState('');
   const [quantity, setQuantity] = useState(''); const [reason, setReason] = useState('');
   const [busy, setBusy] = useState(false); const [error, setError] = useState('');
+  const [scannerOpen, setScannerOpen] = useState(false);
   const Icon = movementIcons[type];
+  function selectFromCode(rawValue) {
+    let code = rawValue.trim();
+    try {
+      const parsed = JSON.parse(code);
+      code = String(parsed.productId ?? parsed.sku ?? code);
+    } catch { /* QR pode conter somente o SKU */ }
+    const normalized = code.toLocaleLowerCase('pt-BR');
+    const product = options.products.find((item) => item.id.toLocaleLowerCase() === normalized || item.sku.toLocaleLowerCase() === normalized);
+    if (!product) { setError(`Produto não encontrado para o código “${code}”.`); return; }
+    setProductId(product.id); setError(''); setScannerOpen(false);
+  }
   async function submit(event) {
     event.preventDefault(); setBusy(true); setError('');
     try {
@@ -47,8 +118,8 @@ function MovementForm({ options, onDone }) {
     <form onSubmit={submit} className="grid gap-4 sm:grid-cols-2">
       <label className="space-y-2 text-sm font-medium"><span>Operação</span><Select value={type} onValueChange={setType} disabled={busy}>
         <SelectTrigger className="w-full"><SelectValue /></SelectTrigger><SelectContent><SelectItem value="entry">Entrada</SelectItem><SelectItem value="exit">Saída</SelectItem><SelectItem value="adjustment">Ajuste de contagem</SelectItem></SelectContent></Select></label>
-      <label className="space-y-2 text-sm font-medium"><span>Produto</span><OptionSelect value={productId} onValueChange={setProductId} disabled={busy}
-        label="Produto" placeholder="Selecione" options={options.products.map((item) => ({ id: item.id, label: `${item.sku} · ${item.name}` }))} /></label>
+      <label className="space-y-2 text-sm font-medium"><span>Produto</span><div className="flex gap-2"><OptionSelect value={productId} onValueChange={setProductId} disabled={busy}
+        label="Produto" placeholder="Selecione" options={options.products.map((item) => ({ id: item.id, label: `${item.sku} · ${item.name}` }))} /><Button type="button" variant="outline" size="icon" onClick={() => setScannerOpen(true)} disabled={busy} aria-label="Ler QR Code do produto" title="Ler QR Code"><Camera className="size-4" /></Button></div></label>
       <label className="space-y-2 text-sm font-medium"><span>Depósito</span><OptionSelect value={warehouseId} onValueChange={setWarehouseId} disabled={busy}
         label="Depósito" placeholder="Selecione" options={options.warehouses.map((item) => ({ id: item.id, label: item.name }))} /></label>
       <label className="space-y-2 text-sm font-medium"><span>{type === 'adjustment' ? 'Novo saldo físico' : 'Quantidade'}</span>
@@ -58,6 +129,7 @@ function MovementForm({ options, onDone }) {
       {error && <Alert variant="destructive" className="sm:col-span-2"><AlertDescription>{error}</AlertDescription></Alert>}
       <Button className="sm:col-span-2 sm:w-fit" disabled={busy || !productId || !warehouseId}>{busy && <LoaderCircle className="size-4 animate-spin motion-reduce:animate-none" />}Confirmar {movementLabels[type].toLowerCase()}</Button>
     </form>
+    <QrScanner open={scannerOpen} onClose={() => setScannerOpen(false)} onScan={selectFromCode} />
   </Card>;
 }
 
