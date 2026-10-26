@@ -257,17 +257,16 @@ permitir a porta 3333. Em produção, a URL deve usar HTTPS.
 
 ## 9. Mensageria
 
-A API já grava eventos na `outbox_events`. Sem Google Cloud ou emulador, deixe
+A API já grava eventos na `outbox_events`. Sem Azure Service Bus, deixe
 `MESSAGING_MODE=disabled`; as funcionalidades HTTP e de estoque continuam
 operando normalmente.
 
-Com um projeto Google Cloud ou emulador do Pub/Sub configurado:
+Com um namespace Azure Service Bus configurado:
 
 ```dotenv
-MESSAGING_MODE=google-pubsub
-PUBSUB_TOPIC=inventory-domain-events
-GOOGLE_CLOUD_PROJECT=estoque-inteligente-dev
-# PUBSUB_EMULATOR_HOST=127.0.0.1:8085
+MESSAGING_MODE=azure-service-bus
+AZURE_SERVICE_BUS_CONNECTION_STRING=Endpoint=sb://...
+AZURE_SERVICE_BUS_TOPIC=inventory-domain-events
 ```
 
 Inicie o publicador:

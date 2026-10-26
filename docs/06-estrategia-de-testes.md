@@ -21,7 +21,7 @@ Um teste criado depois da implementação pode aumentar cobertura, mas não comp
 | --- | --- | --- | --- |
 | Unidade | estoque disponível, ABC/XYZ, reposição, transformação e validação | Node Test Runner/Vitest; `flutter_test`; Pytest | a cada alteração |
 | Componente | cards, filtros, estados e widgets adaptativos | React Testing Library; `flutter_test` | a cada pull request |
-| Integração | API + PostgreSQL; publisher/subscriber + emulador Pub/Sub; pipeline + Storage | Testcontainers/emuladores e Pytest | a cada pull request |
+| Integração | API + PostgreSQL; publisher/subscriber + Azure Service Bus; pipeline + Storage | Testcontainers/emuladores e Pytest | a cada pull request |
 | Contrato | OpenAPI dos clientes e Protobuf dos eventos | validação de esquema e testes de compatibilidade | a cada contrato alterado |
 | Ponta a ponta | login, produto, previsão e risco em Web/Mobile/Desktop | Playwright e Flutter integration tests | antes de merge/release |
 | Dados/ML | qualidade, ausência de vazamento, baseline e reprodutibilidade | Pytest, backtesting temporal e relatório de métricas | a cada dataset/modelo |
@@ -94,7 +94,7 @@ Uma história só está pronta quando:
 | Flutter | teste de renderização e navegação | testar layout móvel/desktop e cliente HTTP |
 | Web | lint e build de produção | testes de componente e fluxo de busca/exportação |
 | PostgreSQL | restrições no schema | subir banco efêmero e testar migração/índices |
-| Mensageria | contratos Protobuf e padrões definidos | emulador Pub/Sub, idempotência, retry e DLQ |
+| Mensageria | contratos Protobuf e padrões definidos | Service Bus, idempotência, retry e DLQ |
 | Mineração | critérios e métricas definidos | testes de qualidade, baseline e vazamento temporal |
 
 ## 9. Integração contínua no GitHub Actions

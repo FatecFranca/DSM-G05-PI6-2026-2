@@ -1,4 +1,6 @@
 import { fileURLToPath } from 'node:url';
+import { DefaultAzureCredential } from '@azure/identity';
+import { ServiceBusClient } from '@azure/service-bus';
 import { PubSub } from '@google-cloud/pubsub';
 import protobuf from 'protobufjs';
 import { getConfig } from '../../config.js';
@@ -74,6 +76,38 @@ export class GooglePubSubTransport implements MessageTransport {
   }
 }
 
+/** Azure transport keeps the same protobuf envelope and outbox semantics. */
+export class AzureServiceBusTransport implements MessageTransport {
+  private readonly client: ServiceBusClient;
+  private readonly sender;
+
+  public constructor(connectionStringOrNamespace: string, entityName: string) {
+    this.client = connectionStringOrNamespace.startsWith('Endpoint=')
+      ? new ServiceBusClient(connectionStringOrNamespace)
+      : new ServiceBusClient(connectionStringOrNamespace, new DefaultAzureCredential());
+    this.sender = this.client.createSender(entityName);
+  }
+
+  public async publish(event: OutboxEvent, data: Buffer) {
+    await this.sender.sendMessages({
+      body: data,
+      contentType: 'application/x-protobuf',
+      messageId: event.id,
+      correlationId: event.correlation_id,
+      subject: event.event_type,
+      applicationProperties: {
+        aggregateType: event.aggregate_type,
+        eventVersion: String(event.event_version),
+      },
+    });
+  }
+
+  public async close() {
+    await this.sender.close();
+    await this.client.close();
+  }
+}
+
 export class OutboxProcessor {
   public constructor(
     private readonly database: PostgresDatabase,
@@ -107,15 +141,18 @@ export class OutboxProcessor {
 async function main() {
   const config = getConfig();
   const mode = process.env.MESSAGING_MODE ?? 'disabled';
-  if (mode !== 'google-pubsub') {
-    throw new Error('Configure MESSAGING_MODE=google-pubsub para iniciar o publicador.');
+  if (!['google-pubsub', 'azure-service-bus'].includes(mode)) {
+    throw new Error('Configure MESSAGING_MODE=google-pubsub ou azure-service-bus para iniciar o publicador.');
   }
   const database = new PostgresDatabase(config.databaseUrl, Math.min(config.databasePoolMax, 3));
   const encoder = await ProtobufEventEncoder.create();
-  const transport = new GooglePubSubTransport(
-    process.env.PUBSUB_TOPIC ?? 'inventory-domain-events',
-    process.env.GOOGLE_CLOUD_PROJECT,
-  );
+  const transport = mode === 'azure-service-bus'
+    ? new AzureServiceBusTransport(
+      process.env.AZURE_SERVICE_BUS_CONNECTION_STRING ?? process.env.AZURE_SERVICE_BUS_NAMESPACE
+        ?? (() => { throw new Error('Configure AZURE_SERVICE_BUS_CONNECTION_STRING ou AZURE_SERVICE_BUS_NAMESPACE.'); })(),
+      process.env.AZURE_SERVICE_BUS_TOPIC ?? 'inventory-domain-events',
+    )
+    : new GooglePubSubTransport(process.env.PUBSUB_TOPIC ?? 'inventory-domain-events', process.env.GOOGLE_CLOUD_PROJECT);
   const processor = new OutboxProcessor(database, encoder, transport);
   let stopping = false;
   const stop = () => { stopping = true; };

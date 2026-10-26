@@ -31,6 +31,9 @@ Alterações da preferência do sistema e de outras abas são acompanhadas.
 - **Visão geral:** indicadores, gráfico de demanda, curva ABC, filtro das
   dez prioridades retornadas pela API e exportação CSV.
 - **Produtos:** catálogo, busca, paginação e operações administrativas existentes.
+- **Estoque:** curva ABC visual, saldos, histórico auditável e movimentação de entrada/saída.
+- **QR Code:** web usa a câmera do navegador com fallback para SKU; Flutter usa o
+  scanner nativo para selecionar o produto antes da movimentação.
 - **Estoque:** saldos, depósitos, movimentações e transferências existentes.
 - **Inteligência:** projeções de 7, 30 e 90 dias e interpretação da curva ABC.
 - **Qualidade dos dados:** licença, período, critérios de tratamento, contagens,

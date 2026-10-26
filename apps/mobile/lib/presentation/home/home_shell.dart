@@ -1,10 +1,12 @@
 import 'package:flutter/material.dart';
 
+import '../../data/inventory_api_client.dart';
 import '../../domain/inventory_repository.dart';
 import '../alerts/alerts_screen.dart';
 import '../dashboard/dashboard_screen.dart';
 import '../data/data_quality_screen.dart';
 import '../products/products_screen.dart';
+import '../stock/stock_movement_screen.dart';
 import '../widgets/app_brand.dart';
 import '../widgets/theme_picker.dart';
 
@@ -12,12 +14,14 @@ class HomeShell extends StatefulWidget {
   const HomeShell({
     super.key,
     required this.repository,
+    this.api,
     this.accountPage,
     this.userName = 'Minha conta',
     this.userRole = 'viewer',
   });
 
   final InventoryRepository repository;
+  final InventoryApiClient? api;
   final Widget? accountPage;
   final String userName;
   final String userRole;
@@ -50,6 +54,7 @@ class _HomeShellState extends State<HomeShell>
   static const _titles = [
     'Visão geral',
     'Produtos',
+    'Movimentar estoque',
     'Alertas',
     'Qualidade dos dados',
     'Minha conta',
@@ -62,6 +67,9 @@ class _HomeShellState extends State<HomeShell>
     final pages = [
       DashboardScreen(repository: widget.repository),
       ProductsScreen(repository: widget.repository),
+      widget.api == null
+          ? const Center(child: Text('API de estoque indisponível.'))
+          : StockMovementScreen(api: widget.api!, userRole: widget.userRole),
       AlertsScreen(repository: widget.repository),
       DataQualityScreen(repository: widget.repository),
       widget.accountPage ?? SizedBox.shrink(),
@@ -87,7 +95,7 @@ class _HomeShellState extends State<HomeShell>
                 children: [
                   _TopBar(
                     title: _titles[_currentIndex],
-                    onAlerts: () => _select(2),
+                    onAlerts: () => _select(3),
                   ),
                   Expanded(child: content),
                 ],
@@ -119,7 +127,7 @@ class _HomeShellState extends State<HomeShell>
           ThemePicker(),
           IconButton(
             tooltip: 'Notificações',
-            onPressed: () => _select(2),
+            onPressed: () => _select(3),
             icon: Icon(Icons.notifications_none_rounded),
           ),
           SizedBox(width: 6),
@@ -139,6 +147,11 @@ class _HomeShellState extends State<HomeShell>
             icon: Icon(Icons.inventory_2_outlined),
             selectedIcon: Icon(Icons.inventory_2_rounded),
             label: 'Produtos',
+          ),
+          NavigationDestination(
+            icon: Icon(Icons.qr_code_scanner_outlined),
+            selectedIcon: Icon(Icons.qr_code_scanner_rounded),
+            label: 'Movimentar',
           ),
           NavigationDestination(
             icon: Icon(Icons.warning_amber_rounded),
@@ -213,6 +226,11 @@ class _DesktopNavigation extends StatelessWidget {
                     icon: Icon(Icons.inventory_2_outlined),
                     selectedIcon: Icon(Icons.inventory_2_rounded),
                     label: Text('Produtos'),
+                  ),
+                  NavigationRailDestination(
+                    icon: Icon(Icons.qr_code_scanner_outlined),
+                    selectedIcon: Icon(Icons.qr_code_scanner_rounded),
+                    label: Text('Movimentar'),
                   ),
                   NavigationRailDestination(
                     icon: Icon(Icons.warning_amber_rounded),

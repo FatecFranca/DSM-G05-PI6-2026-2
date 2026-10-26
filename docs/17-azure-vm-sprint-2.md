@@ -60,10 +60,10 @@ nem VM validada neste roteiro.
 
 ## Mensageria
 
-O código atual usa outbox e adaptador Google Pub/Sub. Mover a API para uma VM
-Azure **não converte esse adaptador para Azure Service Bus**. Antes da prova de
-mensageria, decidir entre manter Pub/Sub com credenciais próprias ou implementar
-e testar outro adaptador. Não marcar mensageria Azure como implementada.
+O código atual usa outbox e adaptador Azure Service Bus. Antes da prova de
+mensageria, configure identidade gerenciada na VM com permissão de envio no
+namespace e valide o tópico e a DLQ. A implantação reproduzível está em
+`infra/azure/service-bus.bicep`.
 
 ## Evidências finais
 

@@ -2,12 +2,13 @@
 
 > Atualização em 13/10/2026: o ambiente intermediário será uma **VM na Azure**,
 > ainda não criada. Consulte [roteiro Azure](17-azure-vm-sprint-2.md).
-> A proposta Google Cloud abaixo é histórica, não evidência de recursos existentes.
-> O adaptador de mensageria Pub/Sub continua no código; não foi migrado para Azure.
+> A mensageria foi atualizada para **Azure Service Bus**, conforme a decisão do
+> projeto. A configuração reproduzível está em
+> [`19-mensageria-azure.md`](19-mensageria-azure.md) e no template Bicep.
 
 ## 1. Proposta
 
-A arquitetura alvo usa serviços gerenciados do **Google Cloud** e mantém o desenvolvimento local com contêineres. A escolha concentra API, processamento, banco, agendamento, artefatos e observabilidade em um provedor, reduzindo integrações operacionais na fase acadêmica.
+A infraestrutura da sprint usa uma **VM na Azure** para API e worker. A tabela preserva os serviços analíticos Google avaliados anteriormente como alternativa; a mensageria oficial do projeto é Azure Service Bus e está pronta para ser provisionada pelo Bicep.
 
 | Necessidade | Serviço proposto | Justificativa |
 | --- | --- | --- |
@@ -17,7 +18,7 @@ A arquitetura alvo usa serviços gerenciados do **Google Cloud** e mantém o des
 | Banco relacional | Cloud SQL for PostgreSQL | transações, integridade, backup gerenciado e compatibilidade com PostgreSQL local |
 | Arquivos brutos e modelos | Cloud Storage | objetos baratos, versionamento, retenção e ciclo de vida |
 | Agendamento diário | Cloud Scheduler | expressão de horário auditável e chamada autenticada do job |
-| Mensageria distribuída | Pub/Sub | desacopla produtores e consumidores, suporta retentativa, assinaturas independentes e DLQ |
+| Mensageria distribuída | Azure Service Bus | desacopla produtores e consumidores, suporta retentativa, tópicos, assinaturas, detecção de duplicatas e DLQ |
 | Análise em grande escala | BigQuery | data warehouse serverless, armazenamento colunar e separação entre computação e armazenamento |
 | Segredos | Secret Manager | rotação e acesso por identidade, sem tokens em código ou imagem |
 | Imagens dos serviços | Artifact Registry | registro privado integrado à implantação no Cloud Run |
@@ -33,9 +34,9 @@ flowchart LR
     web --> api[Cloud Run: API]
     mobile[Flutter] --> api
     api --> sql[(Cloud SQL PostgreSQL)]
-    api --> queue{{Pub/Sub}}
+    api --> queue{{Azure Service Bus}}
     scheduler[Cloud Scheduler] --> queue
-    queue --> job[Cloud Run Jobs]
+    queue --> job[Worker na VM Azure]
     job --> uci[UCI / Cloud Storage]
     job --> sql
     job --> storage[(Cloud Storage)]

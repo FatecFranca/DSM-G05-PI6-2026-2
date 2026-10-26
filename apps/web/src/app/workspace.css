@@ -91,6 +91,12 @@ nav>.workspace-caption { padding-left:12px; }
 .dashboard-view .metric-icon { background:var(--teal-soft); color:var(--teal); }
 .dashboard-view .metric-icon--red { background:color-mix(in srgb,var(--destructive) 12%,var(--card)); color:var(--destructive); }
 .dashboard-view .metric-icon--blue { background:var(--secondary); color:var(--secondary-foreground); }
+.classification-visual { display:grid; grid-template-columns:150px minmax(0,1fr); gap:18px; align-items:center; margin-top:18px; }
+.classification-donut { position:relative; width:150px; height:150px; }
+.classification-donut>span { position:absolute; inset:0; display:grid; place-content:center; text-align:center; pointer-events:none; }
+.classification-donut strong { font-size:24px; line-height:1; letter-spacing:-.04em; }
+.classification-donut small { display:block; margin-top:4px; color:var(--muted-foreground); font-size:10px; }
+.classification-list { display:grid; gap:14px; }
 .dashboard-view .trend-positive { color:var(--teal); }
 .chart-tooltip { background:var(--card); border:1px solid var(--border); color:var(--foreground); }
 .recharts-cartesian-axis-tick-value { fill:var(--muted-foreground); }
@@ -109,4 +115,5 @@ nav>.workspace-caption { padding-left:12px; }
 @media(min-width:1600px) { .workspace { grid-template-columns:270px minmax(0,1fr); } .ux-page,.dashboard-view .content-wrap { padding:44px 48px; } }
 @media(max-width:1150px) { .workspace { grid-template-columns:215px minmax(0,1fr); } .workspace-sidebar { padding-inline:14px; } .workspace-topbar { padding-inline:24px; } .ux-page,.dashboard-view .content-wrap { padding:26px; } .ux-analytics { grid-template-columns:1fr; } .workspace-breadcrumb { display:none; } }
 @media(max-width:820px) { .workspace { display:block; } .workspace-sidebar { display:none; } .workspace-menu { display:inline-flex; } .workspace-topbar { padding:12px 16px; min-height:68px; } .workspace-topbar .account-actions a { font-size:0; gap:0; } .workspace-topbar .account-actions a svg { width:18px; } .workspace-topbar .account-actions button { font-size:12px; } .ux-page,.dashboard-view .content-wrap,.workspace-content>div>main:not(.ux-page) { padding:24px 18px; } .ux-metrics { grid-template-columns:1fr; gap:12px; } .ux-explain-grid { grid-template-columns:1fr; } .ux-context { align-items:flex-start; flex-wrap:wrap; } .ux-context a { margin-left:30px; } .ux-source-card { flex-wrap:wrap; } .ux-source-card>a { margin-left:0; } .workspace-footer { padding:20px 18px; flex-wrap:wrap; } .ux-panel { padding:20px; } }
+@media(max-width:520px) { .classification-visual { grid-template-columns:1fr; justify-items:center; } .classification-visual .classification-list { width:100%; } }
 @media(prefers-reduced-motion:reduce) { *,*::before,*::after { animation-duration:.01ms!important; animation-iteration-count:1!important; transition-duration:.01ms!important; scroll-behavior:auto!important; } }

@@ -18,7 +18,7 @@ Desenvolver um software multiplataforma de gestão inteligente de estoque alimen
 | Linguagens para Web, Mobile e Desktop | três experiências acessando a mesma API | JavaScript/Next.js; Dart/Flutter para Android, iOS e Windows | `apps/web` e `apps/mobile` | builds instaláveis e testes das jornadas |
 | Back-end Web por framework | API REST versionada | Node.js + Fastify + OpenAPI | `apps/api`, `/health` e `/docs` | persistência PostgreSQL e autenticação |
 | Sistemas distribuídos | API, ingestão e mineração executados separadamente | contêineres stateless, outbox, idempotência e consistência eventual | API, jobs Python e worker de outbox | implantação e prova de carga distribuída |
-| Protocolos de mensageria | eventos desacoplam API e consumidores | Google Pub/Sub; gRPC/HTTPS; payload Protobuf | `.proto`, encoder e publisher concorrente funcionando | assinatura idempotente e ensaio de DLQ |
+| Protocolos de mensageria | eventos desacoplam API e consumidores | Azure Service Bus; payload Protobuf; tópicos e assinaturas | `.proto`, encoder e publisher concorrente funcionando | assinatura idempotente e ensaio de DLQ |
 | Armazenamento em grande escala | separar carga transacional da analítica | PostgreSQL particionado; Parquet no Cloud Storage; BigQuery analítico | mais de 1 milhão de fatos particionados e carga por `COPY` | Parquet/BigQuery e consulta medida |
 | Desenvolvimento Dirigido a Testes | cada regra nasce de um teste falho | ciclo vermelho–verde–refatorar e pirâmide de testes | testes unitários, PostgreSQL real, ML, Web e Flutter na CI | aumentar cenários de backtesting |
 | Controle de versionamento | trabalho colaborativo e rastreável | GitHub Flow, revisão por pull request e commits convencionais | repositório Git e política documentada | proteção da `main` e CI obrigatória |
@@ -41,7 +41,7 @@ flowchart LR
     end
 
     api[API REST\nNode.js + Fastify]
-    broker{{Mensageria\nPub/Sub + Protobuf}}
+    broker{{Mensageria\nAzure Service Bus + Protobuf}}
     workers[Workers distribuídos\nIngestão e ML]
     postgres[(PostgreSQL\noperacional)]
     lake[(Cloud Storage\nParquet)]

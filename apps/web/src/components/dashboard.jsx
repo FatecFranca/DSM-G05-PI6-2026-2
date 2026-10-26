@@ -6,6 +6,7 @@ import {
   ArrowDownRight,
   ArrowUpRight,
   Boxes,
+  Camera,
   ChevronRight,
   Download,
   PackageSearch,
@@ -18,9 +19,12 @@ import {
 import { useMemo, useState } from "react";
 import {
   Area,
+  Cell,
   ComposedChart,
   CartesianGrid,
   Line,
+  Pie,
+  PieChart,
   ResponsiveContainer,
   Tooltip,
   XAxis,
@@ -131,9 +135,21 @@ export function DemandChart({
 }
 export function ClassificationCard({ data, showLink = true }) {
   return <Card className="classification-card" id="classificacao">
-      <h2>Curva ABC</h2>
-      <p className="muted-copy">Participação no catálogo e na receita</p>
-      <div className="classification-list">
+      <div className="row-between"><div><h2>Curva ABC</h2>
+      <p className="muted-copy">Participação no catálogo e na receita</p></div><Badge variant="outline">Valor acumulado</Badge></div>
+      <div className="classification-visual">
+        <div className="classification-donut" aria-label="Distribuição dos produtos por classe ABC">
+          <ResponsiveContainer width="100%" height="100%">
+            <PieChart>
+              <Pie data={data} dataKey="products" nameKey="name" innerRadius="62%" outerRadius="86%" paddingAngle={3} stroke="none">
+                {data.map((item) => <Cell key={item.name} fill={item.color} />)}
+              </Pie>
+              <Tooltip formatter={(value) => [`${value} itens`, 'Produtos']} />
+            </PieChart>
+          </ResponsiveContainer>
+          <span><strong>{data.reduce((total, item) => total + item.products, 0)}</strong><small>itens</small></span>
+        </div>
+        <div className="classification-list">
         {data.map((item) => <div className="classification-item" key={item.name}>
             <div className="row-between">
               <strong><i className="class-mark" style={{ backgroundColor: item.color }} />{item.name}</strong>
@@ -147,6 +163,7 @@ export function ClassificationCard({ data, showLink = true }) {
               <strong>{item.revenue}% da receita</strong>
             </div>
           </div>)}
+        </div>
       </div>
       {showLink && <Button variant="secondary" className="full-button" asChild><Link href="/inteligencia">Explorar análises <ChevronRight size={15} /></Link></Button>}
     </Card>;
@@ -262,7 +279,7 @@ function Dashboard({ user }) {
               </Button>
             </div>
           </section>
-          <div className="ux-context"><Sparkles size={18} /><span><strong>{summary.meta.demo ? 'Demonstração simulada em R$' : 'Análise histórica'}</strong> · {summary.meta.demo ? 'Vendas e preços fictícios. Não usar para decisões reais de compra.' : 'Saldo inicial e custos simulados. Projeções relativas ao fim da base.'}</span><Link href="/dados">Entenda os dados ↗</Link></div>
+          {summary && <div className="ux-context"><Sparkles size={18} /><span><strong>{summary.meta.demo ? 'Demonstração simulada em R$' : 'Análise histórica'}</strong> · {summary.meta.demo ? 'Vendas e preços fictícios. Não usar para decisões reais de compra.' : 'Saldo inicial e custos simulados. Projeções relativas ao fim da base.'}</span><Link href="/dados">Entenda os dados ↗</Link></div>}
           {error && <Alert variant="destructive"><AlertTriangle /><AlertTitle>Não foi possível atualizar os dados</AlertTitle><AlertDescription>Verifique a conexão e tente novamente pelo botão Atualizar.</AlertDescription></Alert>}
           {loading && !summary ? <DashboardSkeleton /> : summary && <>
               <section className="metrics-grid motion-stagger">{metrics.map((metric) => <MetricCard key={metric.label} metric={metric} />)}</section>
