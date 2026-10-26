@@ -76,13 +76,14 @@ class _StockMovementScreenState extends State<StockMovementScreen> {
         break;
       }
     }
-    if (product == null) {
+    final selectedProduct = product;
+    if (selectedProduct == null) {
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(content: Text('Produto não encontrado para “$code”.')),
       );
       return;
     }
-    setState(() => _productId = product['id'].toString());
+    setState(() => _productId = selectedProduct['id'].toString());
   }
 
   Future<void> _scan() async {
@@ -158,12 +159,12 @@ class _StockMovementScreenState extends State<StockMovementScreen> {
               ),
               const SizedBox(height: 18),
               Row(children: [
-                Expanded(child: DropdownButtonFormField<String>(value: _productId, decoration: const InputDecoration(labelText: 'Produto', border: OutlineInputBorder()), items: _products.map((item) => DropdownMenuItem(value: item['id'].toString(), child: Text('${item['sku']} · ${item['name']}', overflow: TextOverflow.ellipsis))).toList(), onChanged: (value) => setState(() => _productId = value))),
+                Expanded(child: DropdownButtonFormField<String>(initialValue: _productId, decoration: const InputDecoration(labelText: 'Produto', border: OutlineInputBorder()), items: _products.map((item) => DropdownMenuItem(value: item['id'].toString(), child: Text('${item['sku']} · ${item['name']}', overflow: TextOverflow.ellipsis))).toList(), onChanged: (value) => setState(() => _productId = value))),
                 const SizedBox(width: 10),
                 IconButton.filledTonal(onPressed: _scan, tooltip: 'Ler QR Code', icon: const Icon(Icons.qr_code_scanner_rounded)),
               ]),
               const SizedBox(height: 14),
-              DropdownButtonFormField<String>(value: _warehouseId, decoration: const InputDecoration(labelText: 'Depósito', border: OutlineInputBorder()), items: _warehouses.map((item) => DropdownMenuItem(value: item['id'].toString(), child: Text(item['name'].toString()))).toList(), onChanged: (value) => setState(() => _warehouseId = value)),
+              DropdownButtonFormField<String>(initialValue: _warehouseId, decoration: const InputDecoration(labelText: 'Depósito', border: OutlineInputBorder()), items: _warehouses.map((item) => DropdownMenuItem(value: item['id'].toString(), child: Text(item['name'].toString()))).toList(), onChanged: (value) => setState(() => _warehouseId = value)),
               const SizedBox(height: 14),
               TextField(controller: _quantity, keyboardType: const TextInputType.numberWithOptions(decimal: true), decoration: const InputDecoration(labelText: 'Quantidade', hintText: '0,0000', border: OutlineInputBorder())),
               const SizedBox(height: 14),
