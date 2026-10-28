@@ -14,6 +14,8 @@
     "db:seed": "tsx src/infrastructure/database/seed.ts",
     "user:promote": "tsx src/infrastructure/database/promote-user.ts",
     "worker:outbox": "tsx src/infrastructure/messaging/outbox-worker.ts",
+    "worker:consumer": "tsx src/infrastructure/messaging/service-bus-consumer.ts",
+    "messaging:dlq": "tsx src/infrastructure/messaging/service-bus-dlq.ts",
     "lint": "eslint .",
     "test": "tsx --test test/**/*.test.ts",
     "test:integration": "tsx test/run-integration.ts"

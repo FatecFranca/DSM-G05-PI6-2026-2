@@ -12,6 +12,8 @@
     "dev:api": "npm run dev --workspace=@estoque-inteligente/api",
     "dev:web": "npm run dev --workspace=@estoque-inteligente/web",
     "worker:outbox": "npm run worker:outbox --workspace=@estoque-inteligente/api",
+    "worker:consumer": "npm run worker:consumer --workspace=@estoque-inteligente/api",
+    "messaging:dlq": "npm run messaging:dlq --workspace=@estoque-inteligente/api --",
     "build": "npm run build --workspaces --if-present",
     "lint": "npm run lint --workspaces --if-present",
     "test": "npm run test --workspaces --if-present",
