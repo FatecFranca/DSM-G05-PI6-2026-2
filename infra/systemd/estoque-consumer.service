@@ -1,0 +1,29 @@
+[Unit]
+Description=Estoque Inteligente Service Bus Consumer
+After=network-online.target docker.service
+Wants=network-online.target
+Requires=docker.service
+
+[Service]
+Type=simple
+User=MerlinTroll
+Group=MerlinTroll
+WorkingDirectory=/home/MerlinTroll/estoque-inteligente
+EnvironmentFile=/etc/estoque-inteligente/api.env
+EnvironmentFile=/etc/estoque-inteligente/messaging.env
+Environment=PATH=/usr/local/bin:/usr/bin:/bin
+ExecStart=/usr/local/bin/node apps/api/dist/infrastructure/messaging/service-bus-consumer.js
+Restart=on-failure
+RestartSec=5
+TimeoutStopSec=30
+NoNewPrivileges=true
+PrivateTmp=true
+PrivateDevices=true
+ProtectSystem=full
+ProtectKernelTunables=true
+ProtectKernelModules=true
+ProtectControlGroups=true
+RestrictSUIDSGID=true
+
+[Install]
+WantedBy=multi-user.target

@@ -1,0 +1,27 @@
+[Unit]
+Description=Estoque Inteligente Daily Data and ML Pipeline
+After=network-online.target docker.service
+Wants=network-online.target
+Requires=docker.service
+
+[Service]
+Type=oneshot
+User=MerlinTroll
+Group=MerlinTroll
+WorkingDirectory=/home/MerlinTroll/estoque-inteligente
+EnvironmentFile=/etc/estoque-inteligente/api.env
+Environment=PATH=/usr/local/bin:/usr/bin:/bin
+ExecStart=/usr/local/bin/npm run data:demo
+ExecStart=/usr/local/bin/npm run ml:demo
+TimeoutStartSec=90min
+NoNewPrivileges=true
+PrivateTmp=true
+PrivateDevices=true
+ProtectSystem=full
+ProtectKernelTunables=true
+ProtectKernelModules=true
+ProtectControlGroups=true
+RestrictSUIDSGID=true
+
+[Install]
+WantedBy=multi-user.target
