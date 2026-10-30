@@ -297,6 +297,11 @@ def main() -> None:
             with connection.transaction():
                 connection.execute("SET LOCAL statement_timeout = 0")
                 connection.execute("SET LOCAL lock_timeout = '10s'")
+                # A primeira carga supera um milhão de linhas. Memória de trabalho
+                # suficiente evita spills e planos excessivamente lentos na VM B-series.
+                connection.execute("SET LOCAL work_mem = '128MB'")
+                connection.execute("SET LOCAL maintenance_work_mem = '256MB'")
+                connection.execute("SET LOCAL synchronous_commit = off")
                 connection.execute("""CREATE TEMP TABLE uci_import_stage(
                   source_row_id text,source_sheet text,invoice_no text,stock_code text,description text,
                   invoice_at timestamptz,invoice_date date,quantity numeric(14,4),unit_price numeric(14,4),
