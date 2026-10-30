@@ -1,0 +1,11 @@
+[Unit]
+Description=Run Estoque Inteligente PostgreSQL backup daily
+
+[Timer]
+OnCalendar=*-*-* 05:15:00 UTC
+RandomizedDelaySec=5min
+Persistent=true
+Unit=estoque-backup.service
+
+[Install]
+WantedBy=timers.target
