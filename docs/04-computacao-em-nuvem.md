@@ -1,14 +1,18 @@
 # Computação em Nuvem II — serviços e justificativas
 
-> Atualização em 13/10/2026: o ambiente intermediário será uma **VM na Azure**,
-> ainda não criada. Consulte [roteiro Azure](17-azure-vm-sprint-2.md).
+> Atualização em 29/10/2026: o ambiente intermediário está implantado na VM
+> Azure `servidor_pi_vi`, em Mexico Central. Consulte
+> [implantação Azure](17-azure-vm-sprint-2.md).
 > A mensageria foi atualizada para **Azure Service Bus**, conforme a decisão do
 > projeto. A configuração reproduzível está em
 > [`19-mensageria-azure.md`](19-mensageria-azure.md) e no template Bicep.
 
 ## 1. Proposta
 
-A infraestrutura da sprint usa uma **VM na Azure** para API e worker. A tabela preserva os serviços analíticos Google avaliados anteriormente como alternativa; a mensageria oficial do projeto é Azure Service Bus e está pronta para ser provisionada pelo Bicep.
+A infraestrutura da sprint usa uma **VM na Azure** para web, API, workers,
+PostgreSQL e jobs Python. A tabela preserva os serviços Google avaliados como
+arquitetura futura; a mensageria oficial Azure Service Bus já foi provisionada
+e validada com identidade gerenciada.
 
 | Necessidade | Serviço proposto | Justificativa |
 | --- | --- | --- |
@@ -66,7 +70,7 @@ flowchart LR
 - Cloud Run regional com múltiplas instâncias, concorrência medida, mínimo de uma instância para a API crítica e limite máximo para proteger custo e banco;
 - Cloud SQL PostgreSQL em configuração regional de alta disponibilidade, com primário e standby em zonas diferentes e failover automático;
 - backups automatizados, recuperação pontual e ensaio periódico de restauração;
-- Pub/Sub desacoplando picos e indisponibilidades temporárias, com retentativas, política de ack e tópico de mensagens não processáveis;
+- Azure Service Bus desacoplando picos e indisponibilidades temporárias, com retentativas, confirmação explícita e DLQ;
 - Cloud Storage regional ou birregional conforme custo/RPO, com versionamento e ciclo de vida;
 - verificações de saúde, timeouts, circuit breaker no adaptador externo e implantação gradual por revisões do Cloud Run;
 - alertas para taxa de erro, latência, backlog, mensagens em DLQ, falha de job, uso do banco e degradação do modelo.

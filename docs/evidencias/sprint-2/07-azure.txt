@@ -1,33 +1,47 @@
-EVIDÊNCIA SANITIZADA — AZURE VM — 18/10/2026
+EVIDÊNCIA SANITIZADA — AZURE — 29/10/2026
 
 Assinatura: Azure for Students
-Limite de gastos: On
 Grupo de recursos: PI5
-VM: servidor
-Região: Canada Central
+VM: servidor_pi_vi
+Região: Mexico Central, regional (sem zona fixa)
 Tamanho: Standard_B2als_v2 (2 vCPU, 4 GiB)
 Sistema: Ubuntu Server 24.04 LTS
-IP público: 4.229.233.225
-Desligamento automático: 03:00 America/Sao_Paulo
+IP público: 68.155.155.247
+Desligamento/desalocação automática: 03:00 America/Sao_Paulo
 
 NSG validado:
-- SSH/TCP 22: permitido somente para 189.15.225.143/32
-- HTTP/TCP 80: público
-- HTTPS/TCP 443: público, reservado para TLS futuro
-- regra pública antiga Vitalis-API/TCP 3333: removida
-- PostgreSQL, Next.js e Fastify: sem porta pública
+- SSH/TCP 22: restrito ao IP administrativo;
+- HTTP/TCP 80: público;
+- HTTPS/TCP 443: público, reservado para TLS futuro;
+- sem regras públicas para Next.js 3000, Fastify 3333 ou PostgreSQL 5433.
 
-UFW: ativo; entrada negada por padrão; OpenSSH e perfil Nginx permitidos.
-Serviços habilitados: estoque-api, estoque-web, nginx e Docker.
+Serviços ativos e habilitados:
+- estoque-api, estoque-web e nginx;
+- estoque-outbox e estoque-consumer;
+- Docker e PostgreSQL 18 healthy;
+- estoque-pipeline.timer e azure-self-deallocate.timer;
+- estoque-backup.timer, dump validado e retenção de três dias;
+- PM2 instalado e daemon habilitado, sem processos duplicados.
 
-Custos observados no Cost Management em 18/10/2026:
-- outubro: aproximadamente R$ 18,69 antes deste deploy;
-- origem observada: IP público e disco do recurso que já existia.
+Azure Service Bus:
+- namespace Standard sb-estoque-pi6-8c9d2359;
+- tópico inventory-domain-events;
+- assinatura inventory-workers;
+- detecção de duplicatas 1 dia; TTL 14 dias; máximo 10 entregas; DLQ;
+- identidade gerenciada com Data Sender e Data Receiver;
+- 2 mensagens processadas e registradas; backlog 0; DLQ 0.
 
 Proteção de custo:
-- a VM existente foi reutilizada para evitar uma segunda cobrança;
-- spending limit da assinatura estava ativo;
-- auto-shutdown configurado;
-- desligar/desalocar a VM pelo portal depois da apresentação.
+- limite de gastos da assinatura ativo;
+- VM de baixo custo e desligamento com desalocação diária;
+- role customizada permite à identidade somente ler e desalocar esta VM;
+- VM antiga servidor permanece desalocada.
 
-Nenhuma chave privada, senha, cookie, token ou URL de banco consta neste arquivo.
+Backup local validado:
+- formato customizado do PostgreSQL 18;
+- tabelas essenciais conferidas pelo catálogo do dump;
+- primeiro arquivo real: 163.241.366 bytes;
+- backup externo continua necessário para desastre da VM.
+
+Nenhuma chave, senha, cookie, token, connection string ou URL de banco consta
+neste arquivo.

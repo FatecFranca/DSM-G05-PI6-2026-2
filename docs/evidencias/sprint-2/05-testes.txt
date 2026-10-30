@@ -119,3 +119,26 @@ PostgreSQL conectado: { database: 'estoque_inteligente', username: 'gabriel', po
 npm run test:ml
 12 testes descobertos; 11 aprovados, 1 integração PostgreSQL opcional ignorada.
 Aviso não fatal: joblib não detectou núcleos físicos e usou os lógicos.
+
+## Atualização Azure — 29/10/2026 — passed
+
+Base: commits até `02ee802`, antes do commit documental final.
+
+- API unitária: 17 aprovados, 0 falhas;
+- Web: 8 aprovados, 0 falhas;
+- integração PostgreSQL: 26 aprovados, 0 falhas;
+- mensageria idempotente: primeira entrega `processed`, repetição `duplicate`,
+  uma única linha persistida;
+- ML: 15 aprovados, 1 integração opcional ignorada;
+- build e lint API/web: aprovados;
+- Flutter analyze: aprovado sem problemas;
+- Flutter test local: não executado porque o Windows está sem Developer Mode
+  para os symlinks dos plugins; não foi registrado como teste aprovado.
+
+Demo validada na VM:
+
+- 261.024 registros simulados até 29/10/2026;
+- 4.737 produtos UCI preservados;
+- WAPE 0,235024, baseline sazonal 0,310933;
+- F1 0,909091; silhouette 0,62093; 5 clusters;
+- site, health e Swagger: HTTP 200 externo.

@@ -1,52 +1,57 @@
-EVIDÊNCIA SANITIZADA — APLICAÇÃO NA NUVEM — 18/10/2026
+EVIDÊNCIA SANITIZADA — APLICAÇÃO NA NUVEM — 29/10/2026
 
-Base implantada: commit a2f10693c175e9deeb2089815c262ce30b23f5b2,
-acrescido da correção local do seed que ainda deve ser commitada pelo grupo.
+VM: servidor_pi_vi, Mexico Central
+Base implantada: commits até 02ee802, mais o commit documental desta validação.
 
 Versões:
-- Node.js 22.23.2
-- npm 10.9.8
-- PostgreSQL 18 Alpine
-- Nginx 1.24.0 (Ubuntu)
+- Node.js 22.23.2 e npm 10.9.8;
+- PostgreSQL 18 Alpine;
+- Nginx 1.24.0;
+- Python 3.12.3 em .venv;
+- PM2 7.1.1 instalado, sem processos porque a aplicação usa systemd.
 
-Validações de código na VM:
-- npm ci: concluído
-- lint API/web: aprovado
-- testes: 19 aprovados, 0 falhas
-- build API/web: aprovado
+Validações executadas na VM:
+- npm ci: concluído;
+- build API/web: aprovado;
+- lint API/web: aprovado;
+- testes Node: 17 API + 8 web, 0 falhas;
+- testes de integração com PostgreSQL real: 26, 0 falhas;
+- testes ML: 15 aprovados e 1 integração opcional ignorada;
+- sete migrações aplicadas.
 
-Banco:
-- migrações aplicadas: 7
-- produtos do seed: 4
-- linhas de demanda: 120
-- previsões: 508
-- contêiner estoque-postgres: healthy
-- bind: 127.0.0.1:5433, sem exposição pública
+Dados e modelos:
+- fatos UCI: 1.067.371; itens aceitos: 1.003.744;
+- produtos UCI preservados: 4.737;
+- demonstração BRL: 261.024 produto/dia até 29/10/2026;
+- WAPE: 23,5024%, contra baseline sazonal 31,0933%;
+- F1: 0,909091; silhouette: 0,62093; 5 clusters.
 
-Teste funcional temporário, removido após a execução:
-- cadastro: HTTP 201
-- login: HTTP 200
-- dashboard autenticado: HTTP 200
+Mensageria:
+- outbox publisher ativo;
+- consumidor idempotente ativo;
+- 2 mensagens confirmadas e 2 UUIDs em processed_messages;
+- backlog da assinatura: 0;
+- DLQ: 0; comando de inspeção validado em modo somente leitura.
 
-Teste externo a partir do computador administrativo:
-- http://4.229.233.225/login: HTTP 200
-- http://4.229.233.225/health: HTTP 200, banco connected
-- http://4.229.233.225/docs/: HTTP 200
+Automação:
+- estoque-pipeline.timer: atualização diária de dados e modelos às 04:30 UTC,
+  com atraso aleatório de até 5 minutos;
+- azure-self-deallocate.timer: desalocação da VM às 06:00 UTC;
+- estoque-backup.timer: dump validado de 163.241.366 bytes, retenção 3 dias;
+- todos os serviços essenciais habilitados no boot.
 
-Teste de recuperação controlada:
-- PostgreSQL e serviços de aplicação reiniciados;
-- produtos antes do reinício: 4;
-- produtos depois do reinício: 4;
-- API, web e Nginx ativos; PostgreSQL healthy após a recuperação.
+Teste externo:
+- http://68.155.155.247/: HTTP 200;
+- http://68.155.155.247/health: HTTP 200, banco conectado;
+- http://68.155.155.247/docs/: HTTP 200.
 
 Topologia:
 Internet -> Nginx :80 -> Next.js 127.0.0.1:3000
                          Fastify 127.0.0.1:3333
                          PostgreSQL 127.0.0.1:5433
+Fastify -> outbox -> Azure Service Bus -> consumer -> processed_messages
 
-Limitação declarada: ambiente intermediário em HTTP. Ainda não há domínio,
-certificado TLS nem SMTP; portanto a API não foi declarada como produção.
-
-O npm audit reportou 21 ocorrências em dependências: 2 moderadas, 15 altas e
-4 críticas. Correção automática com breaking changes não foi aplicada antes da
-entrega; permanece necessária uma triagem controlada.
+Limitação declarada: homologação acadêmica em HTTP. Domínio, TLS, SMTP real,
+backup externo, alertas e alta disponibilidade continuam pendentes para
+produção. O npm audit informou 24 ocorrências transitivas: 1 baixa, 6
+moderadas, 13 altas e 4 críticas; nenhuma correção forçada foi aplicada.

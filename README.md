@@ -89,12 +89,21 @@ movimentação, o pipeline cria o depósito claramente identificado como
 `Depósito simulado (UCI)` e calcula uma posição inicial reproduzível. Valores
 monetários da base são exibidos em GBP, sem mistura silenciosa de moedas.
 
-Para executar a publicação assíncrona, configure credenciais do Google Cloud ou
-o emulador do Pub/Sub, defina `MESSAGING_MODE=google-pubsub` e execute:
+Para executar a mensageria oficial, configure o Azure Service Bus por identidade
+gerenciada ou connection string fora do Git. O publicador usa Transactional
+Outbox e o consumidor registra os UUIDs processados para garantir idempotência:
 
 ```bash
 npm run worker:outbox
+npm run worker:consumer
+# inspeção somente leitura da DLQ
+npm run messaging:dlq -- --limit 20
+# replay explícito, após corrigir a causa
+npm run messaging:dlq -- --limit 20 --execute
 ```
+
+O contrato Protobuf está em `infra/messaging/inventory_events.proto` e a
+infraestrutura reproduzível em `infra/azure/service-bus.bicep`.
 
 ## Validação
 
