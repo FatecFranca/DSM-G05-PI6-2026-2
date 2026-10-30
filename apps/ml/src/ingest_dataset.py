@@ -206,11 +206,10 @@ def persist(connection: psycopg.Connection, dataset_id: str, sync_id: str, count
            RETURNING id"""
     ).fetchone()[0]
     connection.execute(
-        """WITH anchor AS (SELECT max(demand_date) AS day FROM daily_product_demand WHERE dataset_version_id=%s),
-        recent AS (
+        """WITH recent AS MATERIALIZED (
           SELECT d.product_id, sum(d.units_sold) / 30.0 AS daily_average
-          FROM daily_product_demand d CROSS JOIN anchor a
-          WHERE d.dataset_version_id=%s AND d.demand_date BETWEEN a.day - 29 AND a.day
+          FROM daily_product_demand d
+          WHERE d.dataset_version_id=%s AND d.demand_date BETWEEN %s::date - 29 AND %s::date
           GROUP BY d.product_id
         )
         INSERT INTO inventory_levels(product_id,warehouse_id,on_hand_quantity,reserved_quantity,measured_at)
@@ -220,14 +219,13 @@ def persist(connection: psycopg.Connection, dataset_id: str, sync_id: str, count
         ON CONFLICT(product_id,warehouse_id) DO UPDATE SET
           on_hand_quantity=excluded.on_hand_quantity,reserved_quantity=0,
           measured_at=excluded.measured_at,updated_at=now()""",
-        (dataset_id, dataset_id, warehouse_id, last_date),
+        (dataset_id, last_date.date(), last_date.date(), warehouse_id, last_date),
     )
     connection.execute(
-        """WITH anchor AS (SELECT max(demand_date) AS day FROM daily_product_demand WHERE dataset_version_id=%s),
-        recent AS (
+        """WITH recent AS MATERIALIZED (
           SELECT d.product_id, sum(d.units_sold) / 30.0 AS daily_average
-          FROM daily_product_demand d CROSS JOIN anchor a
-          WHERE d.dataset_version_id=%s AND d.demand_date BETWEEN a.day - 29 AND a.day
+          FROM daily_product_demand d
+          WHERE d.dataset_version_id=%s AND d.demand_date BETWEEN %s::date - 29 AND %s::date
           GROUP BY d.product_id
         )
         UPDATE products p SET
@@ -236,7 +234,7 @@ def persist(connection: psycopg.Connection, dataset_id: str, sync_id: str, count
           cost_price=round(COALESCE(p.sale_price,0) * 0.60,4),
           updated_at=now()
         FROM recent r WHERE p.id=r.product_id AND p.source='uci_online_retail'""",
-        (dataset_id, dataset_id),
+        (dataset_id, last_date.date(), last_date.date()),
     )
     counts = connection.execute(
         """SELECT count(*)::bigint,
