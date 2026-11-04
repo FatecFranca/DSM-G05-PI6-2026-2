@@ -267,17 +267,21 @@ Com um namespace Azure Service Bus configurado:
 MESSAGING_MODE=azure-service-bus
 AZURE_SERVICE_BUS_CONNECTION_STRING=Endpoint=sb://...
 AZURE_SERVICE_BUS_TOPIC=inventory-domain-events
+AZURE_SERVICE_BUS_SUBSCRIPTION=inventory-workers
 ```
 
-Inicie o publicador:
+Inicie publicador e consumidor em terminais separados:
 
 ```powershell
 npm run worker:outbox
+npm run worker:consumer
 ```
 
 O worker usa Protocol Buffers, retentativas e bloqueio concorrente
-`FOR UPDATE SKIP LOCKED`. A entrega é pelo menos uma vez; consumidores devem usar
-`processed_messages` para idempotência.
+`FOR UPDATE SKIP LOCKED`. O consumidor incluído registra `processed_messages`
+para idempotência. Inspecione a DLQ sem removê-la com
+`npm run messaging:dlq -- --limit 20`; acrescente `--execute` somente depois de
+corrigir a causa da falha.
 
 ## 10. Validar a instalação
 

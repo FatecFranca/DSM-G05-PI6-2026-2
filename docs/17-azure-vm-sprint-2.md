@@ -1,113 +1,99 @@
 # Azure VM — implantação da sprint 2
 
-Implantação intermediária executada e validada em **18/10/2026**. Para evitar
-um segundo custo na assinatura Azure for Students, foi reutilizada a VM
-`servidor`, do projeto anterior. O projeto Vitalis foi parado somente depois de
-um backup verificável; seus contêineres, volume e arquivos não foram excluídos.
+Homologação recriada e validada em **29/10/2026** na assinatura Azure for
+Students. A VM anterior em Canada Central teve indisponibilidade de capacidade;
+por isso, o projeto foi migrado para uma VM regional em Mexico Central. A VM
+antiga permanece desalocada apenas como recuperação e não hospeda a aplicação.
 
 ## Ambiente implantado
 
 | Item | Configuração validada |
 | --- | --- |
-| Assinatura | Azure for Students, limite de gastos ativo |
 | Grupo de recursos | `PI5` |
-| VM | `servidor` |
-| Região | Canada Central |
+| VM | `servidor_pi_vi` |
+| Região | Mexico Central, sem zona fixa |
 | Tamanho | `Standard_B2als_v2`, 2 vCPU e 4 GiB |
 | Sistema | Ubuntu Server 24.04 LTS |
 | Node.js / npm | 22.23.2 / 10.9.8 |
-| Banco | PostgreSQL 18 Alpine em contêiner Docker |
-| Proxy | Nginx na porta pública 80 |
-| Endereço | `http://4.229.233.225` |
-| Saúde da API | `http://4.229.233.225/health` |
-| OpenAPI/Swagger | `http://4.229.233.225/docs/` |
+| Banco | PostgreSQL 18 Alpine, contêiner `estoque-postgres` |
+| Proxy | Nginx 1.24.0 na porta pública 80 |
+| Aplicação | `http://68.155.155.247/` |
+| Saúde | `http://68.155.155.247/health` |
+| OpenAPI | `http://68.155.155.247/docs/` |
 
-O site Next.js escuta apenas em `127.0.0.1:3000`, a API Fastify apenas em
-`127.0.0.1:3333` e o PostgreSQL apenas em `127.0.0.1:5433`. O Nginx é o único
-ponto público da aplicação. API e web são serviços `systemd`; o banco usa
-`restart=unless-stopped`. Todos foram habilitados para iniciar com a VM.
+Next.js escuta em `127.0.0.1:3000`, Fastify em `127.0.0.1:3333` e PostgreSQL
+em `127.0.0.1:5433`. Somente Nginx fica exposto à internet. API, web, publicador
+outbox, consumidor Service Bus, Nginx, Docker e timer do pipeline iniciam com a
+VM. O PM2 está instalado e seu daemon está habilitado, mas a lista está vazia:
+os processos do projeto usam systemd para não duplicar portas.
 
-## Segurança e rede
+## Segurança e mensageria
 
-O NSG permite HTTP 80 para a demonstração, reserva HTTPS 443 e restringe SSH 22
-ao IP administrativo observado na implantação. A antiga regra pública
-`Vitalis-API`, porta 3333, foi removida. Não há regras públicas para 3000, 3333,
-5432 ou 5433. O UFW também está ativo com política de negar entrada por padrão.
+O NSG publica HTTP 80 e reserva HTTPS 443. SSH 22 fica restrito ao IP
+administrativo; regras temporárias de implantação são removidas ao fim do
+trabalho. Não há exposição pública de 3000, 3333, 5432 ou 5433. Segredos ficam
+em `/etc/estoque-inteligente`, fora do Git e com acesso restrito.
 
-O acesso administrativo usa chave Ed25519; a chave privada não está no
-repositório. As variáveis de ambiente ficam em `/etc/estoque-inteligente`, com
-permissão `0640`, e não foram impressas nas evidências. O banco usa uma senha
-aleatória e uma role de aplicação separada do superusuário do contêiner.
+A identidade gerenciada da VM possui somente `Azure Service Bus Data Sender` e
+`Data Receiver` no namespace. O tópico `inventory-domain-events` usa detecção
+de duplicatas por um dia; a assinatura `inventory-workers` tem dez tentativas,
+TTL de 14 dias e DLQ. O consumidor grava UUIDs em `processed_messages` antes do
+ack. Na validação, duas mensagens foram processadas, o backlog ficou zerado e a
+DLQ vazia. Consulte [Mensageria Azure](19-mensageria-azure.md).
 
-Esta é uma **homologação acadêmica intermediária**, servida por HTTP. A API roda
-explicitamente em modo de desenvolvimento com e-mail gravado em arquivo porque
-o grupo ainda não forneceu domínio, certificado e SMTP. Não se declarou
-`NODE_ENV=production`: o próprio projeto exige HTTPS e SMTP real nesse modo.
-Antes de tratar o ambiente como produção, configurar domínio, TLS, SMTP,
-desativar cadastro público e revisar cookies, CORS, logs e backup externo.
+## Dados, ML e automação
 
-## Dados e validação
+As sete migrações foram aplicadas. A carga final preserva 1.067.371 fatos UCI,
+1.003.744 itens aceitos, 4.737 produtos originais e 261.024 linhas simuladas em
+BRL até 29/10/2026. A fonte é verificada por SHA-256 e nenhum identificador de
+cliente é persistido. Os jobs publicam K-Means, Random Forest e previsão de
+demanda com métricas e artefatos versionados.
 
-Foram aplicadas as sete migrações e a carga técnica corrigida. Na validação, o
-banco continha 4 produtos, 120 linhas de demanda e 508 previsões. O seed revelou
-e permitiu corrigir um conflito com o depósito criado pela migração 004.
+`estoque-pipeline.timer` executa diariamente por volta de **01:30 no horário de
+São Paulo** (04:30 UTC, com atraso aleatório de até cinco minutos): primeiro
+estende os dados simulados até o dia corrente e depois republica os modelos. O
+timer é persistente, então uma execução perdida ocorre na próxima inicialização.
+`estoque-backup.timer` gera um dump PostgreSQL customizado por volta de 02:15,
+valida tamanho e tabelas essenciais e mantém somente três dias. O primeiro dump
+real validado possui aproximadamente 156 MiB. Backup externo e teste de
+restauração em outro host continuam necessários para produção.
 
-No commit-base `a2f1069`, executaram com sucesso:
+## Validação
 
-- `npm ci`, lint de API/web, 19 testes não integrados e build de produção;
-- saúde da API com banco conectado;
-- cadastro temporário, login e consulta autenticada do dashboard;
-- acesso externo ao site, `/health` e `/docs/`, todos com HTTP 200;
-- reinício controlado de banco/API/web, preservando os 4 produtos do seed.
+No código até `02ee802`, foram aprovados na própria VM:
 
-O `npm audit` informou 21 ocorrências em dependências (2 moderadas, 15 altas e
-4 críticas). Não foi usado `npm audit fix --force`, pois isso pode introduzir
-mudanças incompatíveis antes da entrega. A triagem e atualização controlada das
-dependências permanecem como pendência técnica.
+- `npm ci`, build e lint de API e web;
+- 17 testes Node da API e 8 do web;
+- 26 testes de integração com PostgreSQL real, incluindo repetição idempotente;
+- 15 testes de ML aprovados e 1 integração opcional ignorada;
+- publicação e consumo reais no Azure Service Bus;
+- site, `/health` e `/docs/` com HTTP 200 externo.
 
-## Preservação do Vitalis
-
-## Mensageria Azure Service Bus
-
-O código atual usa outbox e adaptador Azure Service Bus. Antes da prova de
-mensageria, configure identidade gerenciada na VM com permissão de envio no
-namespace e valide o tópico e a DLQ. A implantação reproduzível está em
-`infra/azure/service-bus.bicep`.
-
-O backup está em
-`/home/MerlinTroll/backups/vitalis-20261018T170441Z` e contém dump completo do
-PostgreSQL, código sem `node_modules`, arquivos Compose, unidade `systemd`,
-inspeção dos contêineres e `SHA256SUMS`. O dump passou em `gzip -t`. Os
-contêineres `vitalis-postgres` e `vitalis-ml` estão parados com reinício
-automático desabilitado, e o volume `vitalis_vitalis_pg_data` foi preservado.
+O `npm audit` ainda informa 24 ocorrências transitivas (1 baixa, 6 moderadas,
+13 altas e 4 críticas). Não foi aplicado `--force`, pois exigiria mudanças
+potencialmente incompatíveis; a atualização controlada permanece pendência.
 
 ## Custo e operação
 
-Na consulta de 18/10/2026, a assinatura estava com `spendingLimit: On`. O Cost
-Management mostrava aproximadamente **R$ 18,69** em outubro, referentes ao IP
-público e ao disco já existentes, antes deste deploy. A referência pública de
-varejo consultada para a VM `Standard_B2als_v2` em Canada Central era cerca de
-**R$ 0,2182 por hora** de computação, sujeita à cobrança real da assinatura.
-
-O desligamento automático está habilitado para **03:00 no horário de São Paulo**.
-Antes da apresentação, ligar a VM no portal e confirmar os três endereços acima.
-Desligar pelo portal com desalocação ao terminar; desligar apenas dentro do Linux
-pode continuar reservando capacidade e gerando cobrança.
-
-Comando de acesso, sem expor a chave:
+A assinatura mantém limite de gastos. Como o recurso nativo DevTestLab não está
+disponível nessa região, um timer local usa a identidade gerenciada e uma role
+customizada mínima para desalocar somente esta VM às **03:00 de São Paulo**.
+Isso evita cobrança de computação esquecida; disco e IP continuam sendo
+recursos cobrados enquanto existirem.
 
 ```powershell
-ssh -i "$env:USERPROFILE\.ssh\azure_servidor_pi6_ed25519" MerlinTroll@4.229.233.225
+ssh -i "$env:USERPROFILE\.ssh\azure_servidor_pi6_ed25519" MerlinTroll@68.155.155.247
 ```
 
-Comandos úteis dentro da VM:
-
 ```bash
-sudo systemctl status estoque-api estoque-web nginx
+sudo systemctl status estoque-api estoque-web estoque-outbox estoque-consumer
+sudo systemctl status estoque-pipeline.timer azure-self-deallocate.timer
 sudo docker ps --filter name=estoque-postgres
-sudo journalctl -u estoque-api -u estoque-web --since today
 curl http://127.0.0.1/health
 ```
 
-Uma VM continua sendo ponto único de falha. A entrega demonstra ambiente em
-nuvem, integração e configuração inicial; não demonstra alta disponibilidade.
+O projeto Vitalis e seus contêineres, imagens, volumes, unidades e arquivos não
+existem nesta nova VM. Ela contém somente os recursos deste projeto. O ambiente
+continua sendo homologação acadêmica em HTTP: domínio, TLS, SMTP real, backup
+externo fora da VM, monitoramento com alertas e alta disponibilidade ainda são
+requisitos para produção.

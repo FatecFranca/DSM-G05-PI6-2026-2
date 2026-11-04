@@ -25,9 +25,11 @@ identidade gerenciada e informar apenas o namespace:
 MESSAGING_MODE=azure-service-bus
 AZURE_SERVICE_BUS_NAMESPACE=sb-estoque-inteligente.servicebus.windows.net
 AZURE_SERVICE_BUS_TOPIC=inventory-domain-events
+AZURE_SERVICE_BUS_SUBSCRIPTION=inventory-workers
 ```
 
-Atribua à aplicação a permissão **Azure Service Bus Data Sender** no namespace.
+Atribua à identidade da aplicação as permissões **Azure Service Bus Data
+Sender** e **Azure Service Bus Data Receiver** no namespace.
 A connection string fica restrita ao ambiente local de desenvolvimento e nunca
 deve ser versionada.
 
@@ -47,17 +49,30 @@ az deployment group create `
   --parameters namespaceName=sb-estoque-inteligente topicName=inventory-domain-events
 ```
 
-Para desenvolvimento local, mantenha `MESSAGING_MODE=disabled`. Para testar o
-worker contra a Azure, configure os valores somente no `apps/api/.env`, execute
-`npm run worker:outbox` e monitore a assinatura no Service Bus Explorer.
+Para desenvolvimento local, mantenha `MESSAGING_MODE=disabled`. Para testar os
+dois lados contra a Azure, configure os valores somente no `apps/api/.env` e
+execute `npm run worker:outbox` e `npm run worker:consumer`.
 
 ## Contrato e confiabilidade
 
 Cada mensagem contém `messageId`, `correlationId`, tipo do evento, versão,
 instante UTC e o payload Protobuf. O `messageId` é o UUID da linha da outbox;
-isso permite retentativa segura. Os consumidores devem continuar idempotentes,
-pois a entrega é pelo menos uma vez. Falhas persistentes devem ser
-inspecionadas na dead-letter queue antes de reprocessar.
+isso permite retentativa segura. O consumidor valida o envelope, grava
+`(consumer_name, message_id)` em `processed_messages` com chave primária e só
+então confirma a mensagem. Uma repetição válida é confirmada sem repetir o
+efeito. Falha transitória abandona o lock para nova tentativa; contrato inválido
+vai para a dead-letter queue.
+
+Inspeção e replay são separados para evitar reprocessamento acidental:
+
+```bash
+npm run messaging:dlq -- --limit 20
+npm run messaging:dlq -- --limit 20 --execute
+```
+
+Na homologação de 29/10/2026, publisher e consumer ficaram ativos via systemd,
+2 mensagens foram processadas e registradas, e a assinatura terminou com
+backlog 0 e DLQ 0.
 
 Eventos publicados pelo estoque:
 

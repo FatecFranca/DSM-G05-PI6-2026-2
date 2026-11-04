@@ -1,9 +1,9 @@
 # Alinhamento acadêmico do projeto
 
-> Auditoria da segunda sprint em 13/10/2026: consulte [matriz atual](16-sprint-2.md).
-> A nuvem escolhida passou a ser VM Azure, ainda pendente de criação. Métricas
-> e referências Google Cloud abaixo refletem etapas anteriores; não devem ser
-> usadas como evidência da implantação ou dos modelos atuais sem essa distinção.
+> Atualização de 29/10/2026: a homologação está implantada na VM Azure
+> `servidor_pi_vi`, com aplicação, PostgreSQL, pipeline diário e Azure Service
+> Bus ativos. A topologia Google abaixo permanece apenas como arquitetura alvo;
+> não deve ser apresentada como infraestrutura já provisionada.
 
 Este documento transforma os objetivos das três disciplinas em decisões técnicas e evidências verificáveis do **Estoque Inteligente**. A matriz também evita que algum requisito acadêmico fique implícito ou seja tratado apenas ao final do semestre.
 
@@ -17,12 +17,12 @@ Desenvolver um software multiplataforma de gestão inteligente de estoque alimen
 | --- | --- | --- | --- | --- |
 | Linguagens para Web, Mobile e Desktop | três experiências acessando a mesma API | JavaScript/Next.js; Dart/Flutter para Android, iOS e Windows | `apps/web` e `apps/mobile` | builds instaláveis e testes das jornadas |
 | Back-end Web por framework | API REST versionada | Node.js + Fastify + OpenAPI | `apps/api`, `/health` e `/docs` | persistência PostgreSQL e autenticação |
-| Sistemas distribuídos | API, ingestão e mineração executados separadamente | contêineres stateless, outbox, idempotência e consistência eventual | API, jobs Python e worker de outbox | implantação e prova de carga distribuída |
-| Protocolos de mensageria | eventos desacoplam API e consumidores | Azure Service Bus; payload Protobuf; tópicos e assinaturas | `.proto`, encoder e publisher concorrente funcionando | assinatura idempotente e ensaio de DLQ |
+| Sistemas distribuídos | API, ingestão e mineração executados separadamente | serviços, outbox, idempotência e consistência eventual | API, jobs Python e workers implantados na Azure | separar nós e medir carga em etapa de escala |
+| Protocolos de mensageria | eventos desacoplam API e consumidores | Azure Service Bus; payload Protobuf; tópicos e assinaturas | publicação e consumo reais; 2 mensagens processadas uma vez; DLQ inspecionada vazia | ensaio controlado de falha e alerta de backlog |
 | Armazenamento em grande escala | separar carga transacional da analítica | PostgreSQL particionado; Parquet no Cloud Storage; BigQuery analítico | mais de 1 milhão de fatos particionados e carga por `COPY` | Parquet/BigQuery e consulta medida |
 | Desenvolvimento Dirigido a Testes | cada regra nasce de um teste falho | ciclo vermelho–verde–refatorar e pirâmide de testes | testes unitários, PostgreSQL real, ML, Web e Flutter na CI | aumentar cenários de backtesting |
 | Controle de versionamento | trabalho colaborativo e rastreável | GitHub Flow, revisão por pull request e commits convencionais | repositório Git e política documentada | proteção da `main` e CI obrigatória |
-| Criar ambiente em nuvem com alta disponibilidade | serviços regionais, redundância e recuperação | Cloud Run, Cloud SQL HA, Pub/Sub, Storage e Monitoring | topologia alvo documentada | ambiente de homologação provisionado |
+| Criar ambiente em nuvem com alta disponibilidade | serviços regionais, redundância e recuperação | VM Azure econômica na homologação; serviços gerenciados na topologia alvo | homologação provisionada e validada | redundância, backup externo e ensaio de restauração |
 | Migrar Data Center Local para nuvem | migrar PostgreSQL e jobs sem interrupção indevida | inventário, DMS/CDC, validação, corte e retorno | plano de migração documentado | ensaio com base de homologação |
 | Arquitetura confiável, segura, eficiente e econômica | requisitos NFR, menor privilégio e orçamento | IAM, Secret Manager, backups, autoscaling, alertas e FinOps | decisões e critérios documentados | teste de restauração e relatório de custos |
 | Fases de Mineração de Dados | executar o ciclo completo do problema à operação | CRISP-DM, perfil, preparação, treino, avaliação e publicação | dataset/versionamento, regras e métricas no banco | monitoramento de drift |

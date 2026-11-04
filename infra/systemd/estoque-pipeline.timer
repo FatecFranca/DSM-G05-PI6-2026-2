@@ -1,0 +1,11 @@
+[Unit]
+Description=Run Estoque Inteligente data and ML pipeline daily
+
+[Timer]
+OnCalendar=*-*-* 04:30:00 UTC
+RandomizedDelaySec=5min
+Persistent=true
+Unit=estoque-pipeline.service
+
+[Install]
+WantedBy=timers.target

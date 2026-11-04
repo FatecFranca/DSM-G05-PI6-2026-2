@@ -12,7 +12,7 @@ validação executada e pendências; não substitui evidências reais.
 | Front-end parcialmente integrado | Next.js/JavaScript; autenticação, catálogo, estoque, dashboard e inteligência | sequência de telas mostrando cadastro, consulta e alteração |
 | Banco implementado e populado | PostgreSQL; migrações 001–007, UCI preservada e fonte simulada BRL | DBeaver com tabelas, contagens e consulta por dataset |
 | Commits de todos os integrantes | histórico local registra Gabriel, Alexandre, Dímerson e Uriel; alterações atuais ainda não commitadas | conferir contribuições efetivas da sprint, PRs e commits no GitHub |
-| Ambiente em nuvem criado | Azure VM validada em 18/10; Nginx, Next.js, Fastify e PostgreSQL 18 integrados | configuração sanitizada em `17-azure-vm-sprint-2.md`; ainda faltam os prints finais |
+| Ambiente em nuvem criado | VM Azure validada em 29/10; Nginx, Next.js, Fastify, PostgreSQL 18, pipeline e Service Bus integrados | configuração sanitizada em `17-azure-vm-sprint-2.md`; atualizar o print do portal para a nova VM |
 | Coleta/tratamento e técnica de mineração | pipeline UCI; gerador sintético separado; K-Means, Random Forest e previsão temporal | origem/licença, regras, métricas, execução e resultados consultáveis |
 | Documentação intermediária | documentos 01–15 e este checklist | anexar prints atuais e logs sanitizados; não incluir credenciais |
 
@@ -41,10 +41,10 @@ Salvar em `docs/evidencias/sprint-2/` somente material sanitizado:
 - `04-mineracao.png`: fonte, período, métricas e agrupamentos.
 - `05-testes.txt`: saída dos testes com data e commit utilizado.
 - `06-github.png`: PRs e contribuições reais da equipe.
-- `07-azure.txt`: configuração sanitizada já coletada; complementar com
-  `07-azure.png` mostrando a VM ligada, sem segredos.
-- `08-aplicacao-nuvem.txt` e `08-aplicacao-nuvem.png`: validação técnica e
-  Swagger público já coletados; complementar com a jornada autenticada.
+- `07-azure.txt`: configuração sanitizada da nova VM já coletada; falta
+  `07-azure.png` mostrando `servidor_pi_vi` ligada, sem segredos.
+- `08-aplicacao-nuvem.txt`: validação técnica atualizada. O PNG existente é da
+  VM anterior e deve ser substituído por Swagger e jornada autenticada no IP novo.
 
 Os logs `05-testes.txt`, `07-azure.txt` e `08-aplicacao-nuvem.txt` foram
 produzidos nesta auditoria, e `consultas.sql` contém consultas somente leitura
@@ -57,11 +57,11 @@ verificação da demonstração, lint web/API e typecheck aprovados; 11 testes d
 mineração aprovados e 1 integração opcional ignorada. Não foi executado novo
 build Flutter nem teste visual ponta a ponta nesta auditoria.
 
-Validação na Azure em 18/10/2026: lint, 19 testes e build aprovados; sete
-migrações aplicadas; seed com 4 produtos, 120 registros de demanda e 508
-previsões; cadastro, login e dashboard autenticado aprovados; site, saúde e
-Swagger acessíveis externamente com HTTP 200. O ambiente é de homologação em
-HTTP e ainda não possui domínio, TLS ou SMTP.
+Validação na Azure em 29/10/2026: lint e build aprovados; 17 testes da API, 8 do
+web e 26 integrações com PostgreSQL real aprovados; sete migrações aplicadas;
+publisher e consumer do Service Bus ativos, com 2 mensagens processadas,
+backlog 0 e DLQ 0; site, saúde e Swagger acessíveis externamente com HTTP 200.
+O ambiente é de homologação em HTTP e ainda não possui domínio, TLS ou SMTP.
 
 ## Cuidados antes da entrega
 
@@ -69,7 +69,7 @@ HTTP e ainda não possui domínio, TLS ou SMTP.
 - Confirmar todos os integrantes e distribuir tarefas reais com autoria própria.
 - Guardar backup fora do Git; testar conexão após migração do banco local.
 - Usar senha forte e distinta na nuvem; não reutilizar credenciais compartilhadas.
-- A base simulada cobre até a última carga, não se atualiza automaticamente.
+- A base simulada é estendida diariamente por timer; conferir o último job antes da demonstração.
 - VM única é ambiente intermediário, não arquitetura de alta disponibilidade.
 
 Veja [Demonstração em reais](15-demonstracao-em-reais.md) para carga/treino.
@@ -90,15 +90,11 @@ em `apps/api/test/` para os contratos completos; não retirar proteções para o
 
 ## Referência dos dados na auditoria
 
-A base simulada estava carregada até **19/09/2026**, com 259.104 registros
-produto/dia e 48 produtos simulados. Não houve carga fictícia de novas datas
-durante a migração de 13/10/2026. Os valores originais UCI permanecem GBP.
-Resultados publicados: WAPE 22,8933% (referência 29,4832%), F1 de classificação
-0,909091 e 5 grupos. São métricas da simulação, não de uma empresa real.
-
-Antes de apresentar, decidir se manterá esse corte fixo reproduzível ou se
-executará `npm run data:demo` e `npm run ml:demo` para uma data mais recente;
-se atualizar, refazer as evidências e registrar as novas métricas.
+A base simulada foi atualizada até **29/10/2026**, com 261.024 registros
+produto/dia e 48 produtos simulados. A UCI original preserva 1.067.371 fatos e
+4.737 produtos em GBP. Resultados publicados: WAPE 23,5024%, contra baseline
+sazonal de 31,0933%; F1 de classificação 0,909091; silhouette 0,62093 e 5
+grupos. São métricas da simulação, não de uma empresa real.
 
 Documentos complementares: [Azure](17-azure-vm-sprint-2.md) e
 [migração PostgreSQL local](18-postgresql-pc.md).
