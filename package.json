@@ -29,6 +29,7 @@
     "data:load": "node scripts/run-python.mjs -m apps.ml.src.ingest_dataset",
     "data:demo": "node scripts/run-python.mjs -m apps.ml.src.simulate_dataset",
     "ml:demo": "node scripts/run-python.mjs -m apps.ml.src.train_models --dataset demo-brl",
+    "demo:refresh": "npm run data:demo && npm run ml:demo",
     "ml:train": "node scripts/run-python.mjs -m apps.ml.src.train_models",
     "ml:study": "node scripts/run-python.mjs -m apps.ml.src.preprocessing_study",
     "data:setup": "npm run db:migrate && npm run data:download && npm run data:load && npm run ml:train",

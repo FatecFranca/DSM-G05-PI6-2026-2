@@ -6,6 +6,7 @@ import type {
   DemandPoint,
   ForecastResult,
   ProductFilters,
+  ProductInsightsResult,
   ProductList,
   ProductSummary,
   RiskLevel,
@@ -14,6 +15,7 @@ import type {
 import type { PostgresDatabase } from '../database/postgres-database.js';
 
 const classificationColors = { A: '#3157d5', B: '#c18b28', C: '#8b98ad' } as const;
+const businessDateSql = "(CURRENT_TIMESTAMP AT TIME ZONE 'America/Sao_Paulo')::date";
 
 // Select one run per active dataset: keeping older models must not multiply demand.
 const latestForecastRun = `SELECT candidate.id FROM model_runs candidate
@@ -30,9 +32,9 @@ function asNullableNumber(value: string | number | null): number | null {
 }
 
 function formatDateLabel(date: string): string {
-  return new Intl.DateTimeFormat('pt-BR', { day: 'numeric', month: 'short', timeZone: 'UTC' })
-    .format(new Date(`${date}T00:00:00.000Z`))
-    .replace('.', '');
+  return new Intl.DateTimeFormat('pt-BR', {
+    day: '2-digit', month: '2-digit', year: 'numeric', timeZone: 'UTC',
+  }).format(new Date(`${date}T00:00:00.000Z`));
 }
 
 function riskPresentation(risk: RiskLevel) {
@@ -55,7 +57,8 @@ type ProductRow = {
 
 const productProjection = `
   WITH anchor AS (
-    SELECT id, period_ended_on AS day FROM dataset_versions
+    SELECT id, period_ended_on AS day, GREATEST(period_ended_on + 1, ${businessDateSql}) AS forecast_start
+    FROM dataset_versions
     WHERE status = 'ready' ORDER BY imported_at DESC NULLS LAST LIMIT 1
   ), latest_analysis AS (
     SELECT DISTINCT ON (pa.product_id)
@@ -80,7 +83,7 @@ const productProjection = `
     JOIN anchor a ON a.id = mr.dataset_version_id
     WHERE df.horizon_days = 30
       AND mr.id = (${latestForecastRun})
-      AND df.target_date BETWEEN a.day + 1 AND a.day + 30
+      AND df.target_date BETWEEN a.forecast_start AND a.forecast_start + 29
     GROUP BY df.product_id
   ), projected AS (
     SELECT
@@ -141,9 +144,12 @@ export class PostgresInventoryRepository implements InventoryRepository {
                     WHERE d.demand_date >= a.day - 29), 100) AS service_level
         FROM projected`),
       this.database.query<{ day: string; actual: string | null; forecast: string | null; lower: string | null; upper: string | null }>(`
-        WITH anchor AS (SELECT id,period_ended_on AS day FROM dataset_versions WHERE status='ready' ORDER BY imported_at DESC NULLS LAST LIMIT 1),
+        WITH anchor AS (SELECT id,period_ended_on AS day,GREATEST(period_ended_on + 1,${businessDateSql}) AS forecast_start
+          FROM dataset_versions WHERE status='ready' ORDER BY imported_at DESC NULLS LAST LIMIT 1),
         calendar AS (
-          SELECT value::date AS day FROM anchor,generate_series(anchor.day - 6, anchor.day + 7, INTERVAL '1 day') AS value
+          SELECT value::date AS day FROM anchor,generate_series(anchor.day - 6, anchor.day, INTERVAL '1 day') AS value
+          UNION
+          SELECT value::date AS day FROM anchor,generate_series(anchor.forecast_start, anchor.forecast_start + 6, INTERVAL '1 day') AS value
         ), actual AS (
           SELECT demand_date AS day, SUM(units_sold) AS quantity
           FROM daily_product_demand d JOIN anchor a ON a.id=d.dataset_version_id
@@ -155,7 +161,7 @@ export class PostgresInventoryRepository implements InventoryRepository {
           FROM demand_forecasts df
           JOIN model_runs mr ON mr.id = df.model_run_id AND mr.status = 'succeeded'
           JOIN anchor a ON a.id=mr.dataset_version_id
-          WHERE horizon_days = 7 AND target_date BETWEEN a.day + 1 AND a.day + 7
+          WHERE horizon_days = 7 AND target_date BETWEEN a.forecast_start AND a.forecast_start + 6
             AND mr.id = (${latestForecastRun})
           GROUP BY target_date
         )
@@ -187,8 +193,11 @@ export class PostgresInventoryRepository implements InventoryRepository {
       this.database.query<{ finished_at: Date | null }>(`
         SELECT finished_at FROM sync_runs WHERE status IN ('succeeded', 'partial') AND dataset_version_id IS NOT NULL
         ORDER BY finished_at DESC NULLS LAST LIMIT 1`),
-      this.database.query<{ version: string; period_ended_on: string | null; display_name: string; is_simulated: boolean; currency: string }>(`
-        SELECT version,period_ended_on::text,display_name,is_simulated,currency FROM dataset_versions WHERE status='ready'
+      this.database.query<{ version: string; period_ended_on: string | null; display_name: string; is_simulated: boolean;
+        currency: string; forecast_starts_on: string; data_stale: boolean }>(`
+        SELECT version,period_ended_on::text,display_name,is_simulated,currency,
+          GREATEST(period_ended_on + 1,${businessDateSql})::text AS forecast_starts_on,
+          period_ended_on < ${businessDateSql} AS data_stale FROM dataset_versions WHERE status='ready'
         ORDER BY imported_at DESC NULLS LAST LIMIT 1`),
     ]);
 
@@ -217,6 +226,8 @@ export class PostgresInventoryRepository implements InventoryRepository {
         lastSyncAt: sync.rows[0]?.finished_at?.toISOString() ?? null,
         dataset: dataset.rows[0]?.version ? `${dataset.rows[0].display_name} (${dataset.rows[0].version})` : null,
         datasetPeriodEnd: dataset.rows[0]?.period_ended_on ?? null,
+        forecastStartsOn: dataset.rows[0]?.forecast_starts_on ?? null,
+        dataStale: dataset.rows[0]?.data_stale ?? true,
       },
       kpis: {
         stockValue: asNumber(kpi?.stock_value ?? 0),
@@ -277,7 +288,8 @@ export class PostgresInventoryRepository implements InventoryRepository {
       lower: string | null;
       upper: string | null;
     }>(`
-      WITH anchor AS (SELECT id,period_ended_on AS day FROM dataset_versions WHERE status='ready' ORDER BY imported_at DESC NULLS LAST LIMIT 1), actual AS (
+      WITH anchor AS (SELECT id,period_ended_on AS day,GREATEST(period_ended_on + 1,${businessDateSql}) AS forecast_start
+        FROM dataset_versions WHERE status='ready' ORDER BY imported_at DESC NULLS LAST LIMIT 1), actual AS (
         SELECT demand_date AS day, SUM(units_sold) AS quantity
         FROM daily_product_demand d JOIN anchor a ON a.id=d.dataset_version_id
         WHERE demand_date BETWEEN a.day - 13 AND a.day
@@ -291,7 +303,7 @@ export class PostgresInventoryRepository implements InventoryRepository {
         JOIN anchor a ON a.id=mr.dataset_version_id
         WHERE df.horizon_days = $2
           AND mr.id = (${latestForecastRun})
-          AND df.target_date BETWEEN a.day + 1 AND a.day + $2
+          AND df.target_date BETWEEN a.forecast_start AND a.forecast_start + ($2::int - 1)
           AND ($1::uuid IS NULL OR df.product_id = $1)
         GROUP BY target_date
       )
@@ -303,13 +315,13 @@ export class PostgresInventoryRepository implements InventoryRepository {
         SELECT day, NULL, quantity, lower, upper FROM predicted
       ) points
       GROUP BY day ORDER BY day`, [productId ?? null, horizon]);
-    const model = await this.database.query<{ model_version: string; finished_at: Date | null; metrics: Record<string, unknown>; is_simulated: boolean }>(`
-      SELECT model_version, finished_at, metrics,
-        (SELECT is_simulated FROM dataset_versions WHERE id=dataset_version_id) AS is_simulated FROM model_runs
-      WHERE task = 'forecast' AND status = 'succeeded'
-        AND dataset_version_id = (SELECT id FROM dataset_versions WHERE status = 'ready'
-          ORDER BY imported_at DESC NULLS LAST LIMIT 1)
-      ORDER BY finished_at DESC NULLS LAST, created_at DESC, id DESC LIMIT 1`);
+    const model = await this.database.query<{ model_version: string; finished_at: Date | null; metrics: Record<string, unknown>;
+      is_simulated: boolean; as_of_date: string; data_through: string; forecast_starts_on: string }>(`
+      SELECT mr.model_version,mr.finished_at,mr.metrics,dv.is_simulated,${businessDateSql}::text AS as_of_date,
+        dv.period_ended_on::text AS data_through,GREATEST(dv.period_ended_on + 1,${businessDateSql})::text AS forecast_starts_on
+      FROM model_runs mr JOIN dataset_versions dv ON dv.id=mr.dataset_version_id
+      WHERE mr.task='forecast' AND mr.status='succeeded' AND dv.status='ready'
+      ORDER BY dv.imported_at DESC NULLS LAST,mr.finished_at DESC NULLS LAST,mr.created_at DESC,mr.id DESC LIMIT 1`);
 
     return {
       demo: model.rows[0]?.is_simulated ?? false,
@@ -318,6 +330,10 @@ export class PostgresInventoryRepository implements InventoryRepository {
       horizon,
       model: model.rows[0]?.model_version ?? null,
       generatedAt: model.rows[0]?.finished_at?.toISOString() ?? null,
+      asOfDate: model.rows[0]?.as_of_date ?? new Date().toISOString().slice(0, 10),
+      dataThrough: model.rows[0]?.data_through ?? null,
+      forecastStartsOn: model.rows[0]?.forecast_starts_on ?? null,
+      stale: model.rows[0] ? model.rows[0].data_through < model.rows[0].as_of_date : true,
       data: series.rows.map((row): DemandPoint => ({
         date: row.day,
         label: formatDateLabel(row.day),
@@ -326,6 +342,99 @@ export class PostgresInventoryRepository implements InventoryRepository {
         lower: asNullableNumber(row.lower),
         upper: asNullableNumber(row.upper),
       })),
+    };
+  }
+
+  public async getProductInsights(horizon: 7 | 30 | 90): Promise<ProductInsightsResult> {
+    type InsightRow = {
+      id: string; sku: string; name: string; current_class: 'A' | 'B' | 'C' | null;
+      projected_class: 'A' | 'B' | 'C'; recent_daily_average: string; forecast_daily_average: string;
+      available_stock: string; minimum_stock: string; lead_time_days: number; reorder_point: string;
+      suggested_reorder_quantity: string; trend_percent: string;
+    };
+    const [rows, meta] = await Promise.all([
+      this.database.query<InsightRow>(`
+        WITH anchor AS (
+          SELECT id,period_ended_on AS day,GREATEST(period_ended_on + 1,${businessDateSql}) AS forecast_start
+          FROM dataset_versions WHERE status='ready' ORDER BY imported_at DESC NULLS LAST LIMIT 1
+        ), model AS (
+          SELECT mr.id FROM model_runs mr JOIN anchor a ON a.id=mr.dataset_version_id
+          WHERE mr.task='forecast' AND mr.status='succeeded'
+          ORDER BY mr.finished_at DESC NULLS LAST,mr.created_at DESC,mr.id DESC LIMIT 1
+        ), analysis AS (
+          SELECT DISTINCT ON (pa.product_id) pa.product_id,pa.abc_class
+          FROM product_analyses pa JOIN model_runs mr ON mr.id=pa.model_run_id
+          JOIN anchor a ON a.id=mr.dataset_version_id WHERE mr.status='succeeded'
+          ORDER BY pa.product_id,pa.analyzed_at DESC,mr.created_at DESC
+        ), stock AS (
+          SELECT product_id,SUM(available_quantity) AS available FROM inventory_levels GROUP BY product_id
+        ), recent AS (
+          SELECT d.product_id,SUM(d.units_sold)/30.0 AS daily_average
+          FROM daily_product_demand d JOIN anchor a ON a.id=d.dataset_version_id
+          WHERE d.demand_date BETWEEN a.day-29 AND a.day GROUP BY d.product_id
+        ), predicted AS (
+          SELECT df.product_id,SUM(df.predicted_quantity) AS quantity
+          FROM demand_forecasts df JOIN model m ON m.id=df.model_run_id CROSS JOIN anchor a
+          WHERE df.horizon_days=$1 AND df.target_date BETWEEN a.forecast_start AND a.forecast_start+($1::int-1)
+          GROUP BY df.product_id
+        ), base AS (
+          SELECT p.id,p.sku,p.name,a.abc_class AS current_class,COALESCE(r.daily_average,0) AS recent_daily_average,
+            COALESCE(pr.quantity,0)/$1::numeric AS forecast_daily_average,COALESCE(s.available,0) AS available_stock,
+            COALESCE(p.minimum_stock,0) AS minimum_stock,COALESCE(p.lead_time_days,0) AS lead_time_days,
+            (COALESCE(pr.quantity,0)/$1::numeric*30*COALESCE(p.sale_price,0)) AS projected_revenue
+          FROM operational_products p LEFT JOIN analysis a ON a.product_id=p.id LEFT JOIN stock s ON s.product_id=p.id
+          LEFT JOIN recent r ON r.product_id=p.id LEFT JOIN predicted pr ON pr.product_id=p.id WHERE p.active
+        ), ranked AS (
+          SELECT base.*,(SUM(projected_revenue) OVER (ORDER BY projected_revenue DESC,id)-projected_revenue)
+            /NULLIF(SUM(projected_revenue) OVER (),0) AS prior_share FROM base
+        ), calculated AS (
+          SELECT ranked.*,
+            CASE WHEN prior_share IS NULL THEN COALESCE(current_class,'C') WHEN prior_share<0.80 THEN 'A'
+              WHEN prior_share<0.95 THEN 'B' ELSE 'C' END::char(1) AS projected_class,
+            CEIL(GREATEST(minimum_stock,forecast_daily_average*7)+forecast_daily_average*lead_time_days) AS reorder_point,
+            CASE WHEN recent_daily_average=0 THEN CASE WHEN forecast_daily_average>0 THEN 100 ELSE 0 END
+              ELSE ROUND((forecast_daily_average/recent_daily_average-1)*100,2) END AS trend_percent
+          FROM ranked
+        )
+        SELECT id,sku,name,current_class,projected_class,recent_daily_average::text,forecast_daily_average::text,
+          available_stock::text,minimum_stock::text,lead_time_days,reorder_point::text,
+          CEIL(GREATEST(0,reorder_point-available_stock))::text AS suggested_reorder_quantity,trend_percent::text
+        FROM calculated ORDER BY suggested_reorder_quantity DESC,ABS(trend_percent) DESC,name`, [horizon]),
+      this.database.query<{ as_of_date: string; data_through: string | null; forecast_starts_on: string | null;
+        model_version: string | null }>(`
+        SELECT ${businessDateSql}::text AS as_of_date,dv.period_ended_on::text AS data_through,
+          GREATEST(dv.period_ended_on+1,${businessDateSql})::text AS forecast_starts_on,
+          (SELECT mr.model_version FROM model_runs mr WHERE mr.dataset_version_id=dv.id AND mr.task='forecast'
+            AND mr.status='succeeded' ORDER BY mr.finished_at DESC NULLS LAST,mr.created_at DESC LIMIT 1) AS model_version
+        FROM dataset_versions dv WHERE dv.status='ready' ORDER BY dv.imported_at DESC NULLS LAST LIMIT 1`),
+    ]);
+    const rank = { A: 1, B: 2, C: 3 } as const;
+    const info = meta.rows[0];
+    const data = rows.rows.map((row) => {
+      const trendPercent = asNumber(row.trend_percent);
+      const suggested = asNumber(row.suggested_reorder_quantity);
+      const classChange: 'up' | 'down' | 'stable' | 'new' = row.current_class === null ? 'new'
+        : rank[row.projected_class] < rank[row.current_class] ? 'up'
+          : rank[row.projected_class] > rank[row.current_class] ? 'down' : 'stable';
+      return {
+        id: row.id, sku: row.sku, name: row.name, currentClass: row.current_class,
+        projectedClass: row.projected_class, classChange,
+        trend: trendPercent >= 10 ? 'rising' as const : trendPercent <= -10 ? 'falling' as const : 'stable' as const,
+        trendPercent, recentDailyAverage: asNumber(row.recent_daily_average),
+        forecastDailyAverage: asNumber(row.forecast_daily_average), availableStock: asNumber(row.available_stock),
+        minimumStock: asNumber(row.minimum_stock), leadTimeDays: row.lead_time_days,
+        reorderPoint: asNumber(row.reorder_point), suggestedReorderQuantity: suggested, needsReorder: suggested > 0,
+      };
+    });
+    return {
+      meta: {
+        horizon, asOfDate: info?.as_of_date ?? new Date().toISOString().slice(0, 10),
+        dataThrough: info?.data_through ?? null, forecastStartsOn: info?.forecast_starts_on ?? null,
+        model: info?.model_version ?? null,
+        stale: !info?.data_through || info.data_through < info.as_of_date,
+        methodology: 'Tendência compara demanda diária prevista e média dos últimos 30 dias; reposição considera lead time, estoque mínimo e sete dias de segurança; classe projetada usa receita prevista normalizada para 30 dias.',
+      },
+      data, total: data.length,
     };
   }
 

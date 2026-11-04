@@ -117,8 +117,26 @@ como recomendação automática de compra.
 - `demand_forecasts` guarda execução, data-alvo, horizonte e intervalo;
 - artefatos Joblib ficam em `models/` (ignorado pelo Git);
 - `GET /api/v1/datasets/current` expõe proveniência e qualidade;
-- o painel usa a data máxima da versão carregada, nunca `CURRENT_DATE`, evitando
-  gráficos vazios para uma base histórica.
+- `GET /api/v1/insights/products?horizon=7|30|90` compara a média prevista com
+  os 30 dias recentes, calcula ponto de reposição e projeta a classe ABC;
+- o painel preserva as datas reais do modelo. Quando a base está atualizada, a
+  previsão começa no dia posterior ao último dado. Se estiver atrasada, a API
+  informa `stale=true` e usa hoje como início solicitado, sem deslocar previsões
+  antigas como se fossem atuais.
+
+## Inteligência operacional por produto
+
+Além da previsão agregada, o sistema produz três leituras de apoio à decisão:
+
+1. **alta, queda ou estabilidade:** compara a média diária prevista no horizonte
+   com a média dos últimos 30 dias; variações a partir de ±10% recebem tendência;
+2. **reposição sugerida:** considera saldo disponível, prazo de entrega, estoque
+   mínimo e uma proteção equivalente a sete dias da demanda prevista;
+3. **ABC projetada:** recalcula a participação acumulada na receita prevista,
+   normalizada para 30 dias, e indica se o item pode ganhar ou perder importância.
+
+Essas saídas são cenários, não fatos consumados nem ordens de compra. A classe
+histórica somente muda quando houver dados observados e um novo treinamento.
 
 ## Testes e próximos experimentos
 

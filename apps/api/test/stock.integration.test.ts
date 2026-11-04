@@ -41,6 +41,7 @@ describe('Movimentações com PostgreSQL real', { skip: process.env.AUTH_INTEGRA
   });
 
   it('não soma previsões de versões antigas do modelo', async () => {
+    const today = (await db.query<{ day: string }>("SELECT (CURRENT_TIMESTAMP AT TIME ZONE 'America/Sao_Paulo')::date::text AS day")).rows[0]!.day;
     const dataset = await db.query<{ id: string }>(`INSERT INTO dataset_versions
       (slug,version,source_url,doi,license,file_sha256,status,period_started_on,period_ended_on,imported_at)
       VALUES ('test','v1','https://example.com','test','test',repeat('a',64),'ready','2011-01-01','2011-12-09',now()) RETURNING id`);
@@ -51,17 +52,17 @@ describe('Movimentações com PostgreSQL real', { skip: process.env.AUTH_INTEGRA
       for (const horizon of [7, 30, 90]) {
         await db.query(`INSERT INTO demand_forecasts
           (product_id,model_run_id,generated_at,target_date,horizon_days,predicted_quantity)
-          VALUES ($1,$2,now(),'2011-12-10',$3,$4)`, [productId, run.rows[0]!.id, horizon, quantity]);
+          VALUES ($1,$2,now(),(CURRENT_TIMESTAMP AT TIME ZONE 'America/Sao_Paulo')::date,$3,$4)`, [productId, run.rows[0]!.id, horizon, quantity]);
       }
     }
     const repository = new PostgresInventoryRepository(db);
     for (const horizon of [7, 30, 90] as const) {
       const forecast = await repository.getForecast(horizon, productId);
       assert.equal(forecast.model, 'new');
-      assert.equal(forecast.data.find((point) => point.date === '2011-12-10')?.forecast, 12);
+      assert.equal(forecast.data.find((point) => point.date === today)?.forecast, 12);
     }
     assert.equal((await repository.listProducts({})).data.find((product) => product.id === productId)?.forecast, 12);
-    assert.equal((await repository.getDashboardSummary()).demandSeries.find((point) => point.date === '2011-12-10')?.forecast, 12);
+    assert.equal((await repository.getDashboardSummary()).demandSeries.find((point) => point.date === today)?.forecast, 12);
   });
 
   it('protege leitura por sessão e escrita por papel e CSRF', async () => {

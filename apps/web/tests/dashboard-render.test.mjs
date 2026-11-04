@@ -28,6 +28,7 @@ function render(summaryState, forecastState = { data: undefined, isLoading: fals
       if (name === 'next/link') return passthrough;
       if (name === '@/services/dashboard-api-client') return { DashboardApiClient: class {} };
       if (name === '@/lib/report-formatters.mjs') return { serializeCsv: () => '' };
+      if (name === '@/lib/chart-data.mjs') return { connectForecastSeries: (value) => value };
       if (name === '@/components/loading-states') return {
         DashboardSkeleton: () => React.createElement('div', null, 'SKELETON_DASHBOARD'),
         ChartSkeleton: () => React.createElement('div', null, 'SKELETON_CHART'),

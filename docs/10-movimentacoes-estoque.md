@@ -32,6 +32,12 @@ Os eventos são `stock.entry`, `stock.exit`, `stock.adjustment` e `stock.transfe
 
 Movimentações locais recebem `source = manual`; cargas antigas usam `legacy` e o saldo inicial da demonstração usa `dataset`. O cliente não pode informar IDs externos nem a origem. Como a UCI não informa estoque físico, o depósito simulado é sempre identificado na interface e na documentação.
 
+Movimentação física e demanda analítica são independentes. Entrada, saída,
+ajuste e transferência alteram o saldo e a auditoria, mas não definem a data da
+previsão. A rotina de dados registra cada dia do calendário — inclusive zero de
+vendas — e o treinamento usa essa série. Assim, dias sem movimentação não
+devem fazer a previsão continuar presa à última entrada ou saída.
+
 ## API
 
 | Método | Rota | Acesso |

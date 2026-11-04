@@ -12,6 +12,12 @@ class DashboardApiClient {
       signal
     );
   }
+  getProductInsights(horizon, signal) {
+    return this.get(
+      `/api/v1/insights/products?horizon=${horizon}`,
+      signal
+    );
+  }
   async get(path, signal) {
     const response = await fetch(`${this.baseUrl}${path}`, {
       headers: { Accept: "application/json" },

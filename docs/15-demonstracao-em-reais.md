@@ -33,8 +33,8 @@ moedas distintas. Não há seletor de datasets na interface nesta entrega.
 
 ## Atualizações
 
-Execute `npm run data:demo` e `npm run ml:demo` em outro dia para acrescentar
-datas e recalcular previsões. **Não há agendamento automático.** No mesmo dia
+Execute `npm run demo:refresh` em outro dia para acrescentar datas e recalcular
+previsões (`data:demo` seguido de `ml:demo`). **Não há agendamento automático.** No mesmo dia
 a carga não insere nada. Não aceita datas futuras nem retrocede o histórico.
 Um corte pode ser reproduzido com `npm run data:demo -- --through 2026-09-19`.
 
@@ -47,17 +47,23 @@ seguem o catálogo sintético fixo, mesmo após edição do preço operacional.
 `ml:demo` usa os últimos 730 dias. Publica K-Means, Random Forest e previsão
 HistGradientBoosting (ou referência sazonal se obtiver menor MAE).
 Horizontes 7/30/90 dias começam após o último dia gerado; não são vendas novas.
+Em 28/10/2026, portanto, começam em 29/10/2026. Se a rotina diária deixar de
+rodar, a API marca a resposta como desatualizada e a interface orienta executar
+`npm run demo:refresh`; ela não reaproveita uma previsão velha mudando sua data.
 Artefatos e métricas: `models/demo-brl/v2/` (fora do Git). Para apenas avaliar:
 `npm run ml:demo -- --evaluate-only`. Retreinar substitui a execução lógica da versão.
 
-Avaliação em 19/09/2026: WAPE 22,8933%, referência 29,4832%, MAE 3,405217
+Avaliação em 28/10/2026: WAPE 23,1954%, referência 31,0705%, MAE 3,504596
 unidades/produto/dia; F1 do classificador 0,909091 em 12 produtos; 5 grupos.
 Isso **não comprova precisão em vendas reais**. Validação de 30 dias usada para
 seleção não é teste independente; bandas do gráfico são heurísticas.
 
-Inteligência mostra erro e reposição indicativa em 30 dias:
-`max(0, ceil(previsão - saldo disponível))`. Não considera pedidos em aberto,
-lotes mínimos ou estoque de segurança; não dispara compras.
+Inteligência mostra tendências por produto, reposição e mudanças projetadas na
+Curva ABC. A tendência compara a média diária prevista com os 30 dias recentes
+(limiar de ±10%). O ponto de reposição considera demanda durante o lead time e
+o maior valor entre estoque mínimo e sete dias previstos; a sugestão é a falta
+até esse ponto. Não considera pedidos em aberto, lotes mínimos, validade,
+capacidade ou orçamento e não dispara compras.
 
 ## Verificar
 

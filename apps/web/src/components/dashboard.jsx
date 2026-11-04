@@ -1,5 +1,6 @@
 "use client";
 import { serializeCsv } from '@/lib/report-formatters.mjs';
+import { connectForecastSeries } from '@/lib/chart-data.mjs';
 import Link from 'next/link';
 import {
   AlertTriangle,
@@ -61,6 +62,11 @@ function formatCurrency(value, currency = "BRL") {
     maximumFractionDigits: 0
   }).format(value);
 }
+function formatCalendarDate(value) {
+  if (!value) return 'data indisponível';
+  return new Intl.DateTimeFormat('pt-BR', { dateStyle: 'medium', timeZone: 'UTC' })
+    .format(new Date(`${value}T00:00:00Z`));
+}
 function MetricCard({ metric }) {
   const Icon = metric.icon;
   const Direction = metric.direction === "down" ? ArrowDownRight : ArrowUpRight;
@@ -84,7 +90,8 @@ function ChartTooltip({ active, payload, label }) {
   if (!active || !payload?.length) return null;
   return <div className="chart-tooltip">
       <strong>{label}</strong>
-      {payload.filter((entry) => ["actual", "forecast"].includes(String(entry.dataKey))).map((entry) => <span key={String(entry.dataKey)} style={{ color: entry.color }}>
+      {payload.filter((entry) => ["actual", "forecast"].includes(String(entry.dataKey))
+        && !(entry.dataKey === 'forecast' && entry.payload?.forecastBridge)).map((entry) => <span key={String(entry.dataKey)} style={{ color: entry.color }}>
             {entry.dataKey === "actual" ? "Real" : "Previsto"}: {entry.value} un.
           </span>)}
     </div>;
@@ -93,6 +100,7 @@ export function DemandChart({
   data,
   horizon
 }) {
+  const chartData = useMemo(() => connectForecastSeries(data), [data]);
   return <Card className="chart-card" id="previsoes">
       <div className="row-between">
         <div>
@@ -109,7 +117,7 @@ export function DemandChart({
       </div>
       <div className="chart-container" aria-label="Demanda realizada e prevista">
         <ResponsiveContainer width="100%" height="100%">
-          <ComposedChart data={data} margin={{ top: 22, right: 10, left: -22 }}>
+          <ComposedChart data={chartData} margin={{ top: 22, right: 10, left: -22 }}>
             <defs>
               <linearGradient id="forecastArea" x1="0" y1="0" x2="0" y2="1">
                 <stop offset="0%" stopColor="var(--primary)" stopOpacity={0.18} />
@@ -117,7 +125,7 @@ export function DemandChart({
               </linearGradient>
             </defs>
             <CartesianGrid stroke="var(--border)" strokeDasharray="3 3" vertical={false} />
-            <XAxis dataKey="label" axisLine={false} tickLine={false} />
+            <XAxis dataKey="label" axisLine={false} tickLine={false} minTickGap={18} tick={{ fontSize: 11 }} />
             <YAxis axisLine={false} tickLine={false} />
             <Tooltip content={<ChartTooltip />} />
             <Area dataKey="upper" stroke="none" fill="url(#forecastArea)" connectNulls />
@@ -129,7 +137,7 @@ export function DemandChart({
       </div>
       <div className="chart-note">
         <Sparkles size={15} />
-        <span>Estimativas após o fim do histórico. Revise antes de planejar reposições.</span>
+        <span>Datas incluem o ano. A projeção começa no próximo dia do calendário após os dados válidos; revise antes de planejar reposições.</span>
       </div>
     </Card>;
 }
@@ -255,7 +263,7 @@ function Dashboard({ user }) {
     { label: "Valor em estoque", value: formatCurrency(summary.kpis.stockValue, summary.kpis.stockValueCurrency), trend: "Simulado", trendLabel: `valores em ${summary.kpis.stockValueCurrency}`, icon: Warehouse, tone: "teal", direction: "up" },
     { label: "Produtos ativos", value: String(summary.kpis.activeProducts), trend: "Cat\xE1logo", trendLabel: "itens monitorados", icon: Boxes, tone: "blue", direction: "up" },
     { label: "Risco de ruptura", value: String(summary.kpis.stockoutRisk), trend: "Prioridade", trendLabel: "reposi\xE7\xE3o necess\xE1ria", icon: AlertTriangle, tone: "red", direction: "down" },
-    { label: "Horizonte de análise", value: "7 / 30 / 90", trend: "Dias", trendLabel: "após o fim do histórico", icon: TrendingUp, tone: "teal", direction: "up" }
+    { label: "Horizonte de análise", value: "7 / 30 / 90", trend: "Dias", trendLabel: "a partir da data de previsão", icon: TrendingUp, tone: "teal", direction: "up" }
   ] : [];
   return <div className="dashboard-view motion-enter"><main id="conteudo"><div className="content-wrap">
           <section className="page-intro">
@@ -279,7 +287,7 @@ function Dashboard({ user }) {
               </Button>
             </div>
           </section>
-          {summary && <div className="ux-context"><Sparkles size={18} /><span><strong>{summary.meta.demo ? 'Demonstração simulada em R$' : 'Análise histórica'}</strong> · {summary.meta.demo ? 'Vendas e preços fictícios. Não usar para decisões reais de compra.' : 'Saldo inicial e custos simulados. Projeções relativas ao fim da base.'}</span><Link href="/dados">Entenda os dados ↗</Link></div>}
+          {summary && <div className="ux-context"><Sparkles size={18} /><span><strong>{summary.meta.dataStale ? 'Base desatualizada' : summary.meta.demo ? 'Demonstração simulada em R$' : 'Análise histórica'}</strong> · Dados até {formatCalendarDate(summary.meta.datasetPeriodEnd)}; previsão a partir de {formatCalendarDate(summary.meta.forecastStartsOn)}. A demanda é atualizada independentemente das movimentações físicas.</span><Link href="/dados">Entenda os dados ↗</Link></div>}
           {error && <Alert variant="destructive"><AlertTriangle /><AlertTitle>Não foi possível atualizar os dados</AlertTitle><AlertDescription>Verifique a conexão e tente novamente pelo botão Atualizar.</AlertDescription></Alert>}
           {loading && !summary ? <DashboardSkeleton /> : summary && <>
               <section className="metrics-grid motion-stagger">{metrics.map((metric) => <MetricCard key={metric.label} metric={metric} />)}</section>

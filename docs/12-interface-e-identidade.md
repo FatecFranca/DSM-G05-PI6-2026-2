@@ -35,7 +35,8 @@ Alterações da preferência do sistema e de outras abas são acompanhadas.
 - **QR Code:** web usa a câmera do navegador com fallback para SKU; Flutter usa o
   scanner nativo para selecionar o produto antes da movimentação.
 - **Estoque:** saldos, depósitos, movimentações e transferências existentes.
-- **Inteligência:** projeções de 7, 30 e 90 dias e interpretação da curva ABC.
+- **Inteligência:** projeções de 7, 30 e 90 dias, produtos em alta/queda,
+  reposição sugerida e possíveis mudanças de classe ABC.
 - **Qualidade dos dados:** licença, período, critérios de tratamento, contagens,
   identificação SHA-256 e histórico de cargas.
 - **Minha conta:** identificação e alteração de senha.
@@ -53,7 +54,12 @@ Tabelas largas rolam dentro do seu contêiner, sem expandir toda a página.
 
 ## Dados sem falsas promessas
 
-As projeções começam após o último dia da base histórica, não na data atual.
+Os gráficos exibem dia, mês e ano. Com a base atualizada, as projeções começam
+no dia posterior ao último dado. Com a base atrasada, a tela sinaliza a
+defasagem e solicita nova carga/treinamento; previsões antigas não são
+redatadas como se fossem atuais. A demanda diária e a movimentação física são
+conceitos separados: ficar sem entrada ou saída de estoque não congela o
+calendário analítico.
 Saldos iniciais e custos da demonstração são simulados. Os valores UCI são
 exibidos em GBP. As contagens de qualidade podem se sobrepor. A cobertura
 sem referência não deve ser interpretada como disponibilidade garantida.

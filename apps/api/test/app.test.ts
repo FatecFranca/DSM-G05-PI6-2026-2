@@ -11,6 +11,7 @@ import type {
   DatasetStatus,
   ForecastResult,
   ProductFilters,
+  ProductInsightsResult,
   ProductList,
   SyncRunList,
 } from '../src/domain/models.js';
@@ -42,6 +43,8 @@ class FakeInventoryRepository implements InventoryRepository {
         lastSyncAt: null,
         dataset: 'UCI Online Retail II (teste)',
         datasetPeriodEnd: '2011-12-09',
+        forecastStartsOn: '2026-10-28',
+        dataStale: true,
       },
       kpis: {
         stockValue: 184_320,
@@ -77,7 +80,32 @@ class FakeInventoryRepository implements InventoryRepository {
       horizon,
       model: 'test-v1',
       generatedAt: null,
+      asOfDate: '2026-10-28',
+      dataThrough: '2011-12-09',
+      forecastStartsOn: '2026-10-28',
+      stale: true,
       data: [],
+    };
+  }
+
+  public async getProductInsights(horizon: 7 | 30 | 90): Promise<ProductInsightsResult> {
+    return {
+      meta: {
+        horizon,
+        asOfDate: '2026-10-28',
+        dataThrough: '2026-10-28',
+        forecastStartsOn: '2026-10-29',
+        model: 'test-v1',
+        stale: false,
+        methodology: 'Teste',
+      },
+      data: [{
+        id: product.id, sku: product.sku, name: product.name, currentClass: 'B', projectedClass: 'A',
+        classChange: 'up', trend: 'rising', trendPercent: 25, recentDailyAverage: 4,
+        forecastDailyAverage: 5, availableStock: 14, minimumStock: 10, leadTimeDays: 7,
+        reorderPoint: 70, suggestedReorderQuantity: 56, needsReorder: true,
+      }],
+      total: 1,
     };
   }
 
@@ -151,5 +179,17 @@ describe('Estoque Inteligente API', () => {
       headers: { cookie: `estoque_session=${'a'.repeat(43)}` },
     });
     assert.equal(response.statusCode, 400);
+  });
+
+  it('retorna tendências, reposição e mudança de classe projetada', async () => {
+    const response = await app.inject({
+      method: 'GET',
+      url: '/api/v1/insights/products?horizon=30',
+      headers: { cookie: `estoque_session=${'a'.repeat(43)}` },
+    });
+    assert.equal(response.statusCode, 200);
+    assert.equal(response.json().data[0].trend, 'rising');
+    assert.equal(response.json().data[0].projectedClass, 'A');
+    assert.equal(response.json().data[0].needsReorder, true);
   });
 });

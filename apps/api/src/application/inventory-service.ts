@@ -20,6 +20,10 @@ export class InventoryService {
     return this.repository.getForecast(horizon, productId);
   }
 
+  public getProductInsights(horizon: 7 | 30 | 90) {
+    return this.repository.getProductInsights(horizon);
+  }
+
   public listSyncRuns() {
     return this.repository.listSyncRuns();
   }

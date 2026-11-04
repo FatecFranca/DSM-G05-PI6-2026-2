@@ -82,6 +82,20 @@ export async function registerRoutes(
     request.query.productId,
   ));
 
+  app.get<{ Querystring: ForecastQuery }>('/api/v1/insights/products', {
+    schema: {
+      tags: ['Forecasts'],
+      summary: 'Prevê tendência, reposição e possível mudança de classe dos produtos',
+      querystring: {
+        type: 'object',
+        properties: {
+          horizon: { type: 'integer', enum: [7, 30, 90], default: 30 },
+        },
+      },
+      response: successResponse,
+    },
+  }, (request) => service.getProductInsights(request.query.horizon ?? 30));
+
   app.get('/api/v1/sync-runs', {
     schema: {
       tags: ['Integrations'],

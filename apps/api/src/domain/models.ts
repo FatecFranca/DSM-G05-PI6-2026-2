@@ -38,6 +38,8 @@ export type DashboardSummary = {
     lastSyncAt: string | null;
     dataset: string | null;
     datasetPeriodEnd: string | null;
+    forecastStartsOn: string | null;
+    dataStale: boolean;
   };
   kpis: {
     stockValue: number;
@@ -69,7 +71,44 @@ export type ForecastResult = {
   horizon: 7 | 30 | 90;
   model: string | null;
   generatedAt: string | null;
+  asOfDate: string;
+  dataThrough: string | null;
+  forecastStartsOn: string | null;
+  stale: boolean;
   data: DemandPoint[];
+};
+
+export type ProductInsight = {
+  id: string;
+  sku: string;
+  name: string;
+  currentClass: 'A' | 'B' | 'C' | null;
+  projectedClass: 'A' | 'B' | 'C';
+  classChange: 'up' | 'down' | 'stable' | 'new';
+  trend: 'rising' | 'falling' | 'stable';
+  trendPercent: number;
+  recentDailyAverage: number;
+  forecastDailyAverage: number;
+  availableStock: number;
+  minimumStock: number;
+  leadTimeDays: number;
+  reorderPoint: number;
+  suggestedReorderQuantity: number;
+  needsReorder: boolean;
+};
+
+export type ProductInsightsResult = {
+  meta: {
+    horizon: 7 | 30 | 90;
+    asOfDate: string;
+    dataThrough: string | null;
+    forecastStartsOn: string | null;
+    model: string | null;
+    stale: boolean;
+    methodology: string;
+  };
+  data: ProductInsight[];
+  total: number;
 };
 
 export type SyncRun = {
