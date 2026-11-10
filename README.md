@@ -132,4 +132,6 @@ A [UCI Online Retail II](https://doi.org/10.24432/C5CG6D) é distribuída sob
 [CC BY 4.0](https://creativecommons.org/licenses/by/4.0/), permitindo adaptação
 e uso comercial com atribuição. O projeto não persiste o campo `Customer ID`.
 Arquivos brutos, credenciais, e-mails e artefatos de modelo permanecem fora do
-Git; em nuvem, segredos ficam no Secret Manager e dados grandes no Object Storage.
+Git. Na VM de homologação, segredos ficam em arquivos protegidos sob
+`/etc/estoque-inteligente`; Secret Manager e armazenamento de objetos pertencem
+à arquitetura gerenciada proposta para uma etapa futura.

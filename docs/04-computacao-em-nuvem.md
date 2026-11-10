@@ -1,18 +1,20 @@
 # Computação em Nuvem II — serviços e justificativas
 
-> Atualização em 29/10/2026: o ambiente intermediário está implantado na VM
+> Atualização em 10/11/2026: o ambiente intermediário está implantado na VM
 > Azure `servidor_pi_vi`, em Mexico Central. Consulte
 > [implantação Azure](17-azure-vm-sprint-2.md).
 > A mensageria foi atualizada para **Azure Service Bus**, conforme a decisão do
-> projeto. A configuração reproduzível está em
+> projeto. O publicador usa o namespace externo oficial; o consumo externo ainda
+> depende de uma credencial com permissão `Listen`. A configuração está em
 > [`19-mensageria-azure.md`](19-mensageria-azure.md) e no template Bicep.
 
 ## 1. Proposta
 
 A infraestrutura da sprint usa uma **VM na Azure** para web, API, workers,
 PostgreSQL e jobs Python. A tabela preserva os serviços Google avaliados como
-arquitetura futura; a mensageria oficial Azure Service Bus já foi provisionada
-e validada com identidade gerenciada.
+arquitetura futura. A publicação oficial no Azure Service Bus foi validada com
+uma credencial de envio protegida fora do Git. A identidade gerenciada continua
+na mensageria de homologação criada na assinatura acadêmica.
 
 | Necessidade | Serviço proposto | Justificativa |
 | --- | --- | --- |

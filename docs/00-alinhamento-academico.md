@@ -1,9 +1,12 @@
 # Alinhamento acadêmico do projeto
 
-> Atualização de 29/10/2026: a homologação está implantada na VM Azure
-> `servidor_pi_vi`, com aplicação, PostgreSQL, pipeline diário e Azure Service
-> Bus ativos. A topologia Google abaixo permanece apenas como arquitetura alvo;
-> não deve ser apresentada como infraestrutura já provisionada.
+> Atualização de 10/11/2026: a homologação está implantada na VM Azure
+> `servidor_pi_vi`, com aplicação, PostgreSQL, pipeline diário, SMTP e publicação
+> no Azure Service Bus ativos. Todas as novas publicações seguem para o namespace
+> externo oficial; o consumidor da VM ainda usa a assinatura de homologação
+> anterior porque a credencial externa disponível possui somente envio. A
+> topologia Google abaixo permanece apenas como arquitetura alvo e não deve ser
+> apresentada como infraestrutura já provisionada.
 
 Este documento transforma os objetivos das três disciplinas em decisões técnicas e evidências verificáveis do **Estoque Inteligente**. A matriz também evita que algum requisito acadêmico fique implícito ou seja tratado apenas ao final do semestre.
 
@@ -18,7 +21,7 @@ Desenvolver um software multiplataforma de gestão inteligente de estoque alimen
 | Linguagens para Web, Mobile e Desktop | três experiências acessando a mesma API | JavaScript/Next.js; Dart/Flutter para Android, iOS e Windows | `apps/web` e `apps/mobile` | builds instaláveis e testes das jornadas |
 | Back-end Web por framework | API REST versionada | Node.js + Fastify + OpenAPI | `apps/api`, `/health` e `/docs` | persistência PostgreSQL e autenticação |
 | Sistemas distribuídos | API, ingestão e mineração executados separadamente | serviços, outbox, idempotência e consistência eventual | API, jobs Python e workers implantados na Azure | separar nós e medir carga em etapa de escala |
-| Protocolos de mensageria | eventos desacoplam API e consumidores | Azure Service Bus; payload Protobuf; tópicos e assinaturas | publicação e consumo reais; 2 mensagens processadas uma vez; DLQ inspecionada vazia | ensaio controlado de falha e alerta de backlog |
+| Protocolos de mensageria | eventos desacoplam API e consumidores | Azure Service Bus; payload Protobuf; tópicos e assinaturas | publicação real no tópico externo validada; consumo idempotente validado anteriormente na assinatura de homologação | conceder `Listen` no namespace externo, validar consumo ponta a ponta e criar alerta de backlog |
 | Armazenamento em grande escala | separar carga transacional da analítica | PostgreSQL particionado; Parquet no Cloud Storage; BigQuery analítico | mais de 1 milhão de fatos particionados e carga por `COPY` | Parquet/BigQuery e consulta medida |
 | Desenvolvimento Dirigido a Testes | cada regra nasce de um teste falho | ciclo vermelho–verde–refatorar e pirâmide de testes | testes unitários, PostgreSQL real, ML, Web e Flutter na CI | aumentar cenários de backtesting |
 | Controle de versionamento | trabalho colaborativo e rastreável | GitHub Flow, revisão por pull request e commits convencionais | repositório Git e política documentada | proteção da `main` e CI obrigatória |
@@ -27,8 +30,8 @@ Desenvolver um software multiplataforma de gestão inteligente de estoque alimen
 | Arquitetura confiável, segura, eficiente e econômica | requisitos NFR, menor privilégio e orçamento | IAM, Secret Manager, backups, autoscaling, alertas e FinOps | decisões e critérios documentados | teste de restauração e relatório de custos |
 | Fases de Mineração de Dados | executar o ciclo completo do problema à operação | CRISP-DM, perfil, preparação, treino, avaliação e publicação | dataset/versionamento, regras e métricas no banco | monitoramento de drift |
 | Técnicas e ferramentas de IA | transformar histórico em apoio à compra | Python, scikit-learn, clustering, classificação e regressão temporal | jobs reproduzíveis e artefatos versionados | comparação com novos algoritmos |
-| Aprendizado supervisionado | prever demanda e alta demanda futura | Random Forest e HistGradientBoosting com corte temporal | F1 0,960 e WAPE 0,897, ambos persistidos | backtesting com múltiplas janelas |
-| Aprendizado não supervisionado | descobrir segmentos sem rótulo | K-Means escalado e seleção por silhouette | 2 clusters, silhouette 0,359 e ABC/XYZ | interpretação e política por cluster |
+| Aprendizado supervisionado | prever demanda e alta demanda futura | Random Forest e HistGradientBoosting com corte temporal | execução UCI publicada com F1 0,818 e WAPE 1,092 contra baseline 1,215 | backtesting com múltiplas janelas |
+| Aprendizado não supervisionado | descobrir segmentos sem rótulo | K-Means escalado e seleção por silhouette | 2 clusters, silhouette 0,358 e ABC/XYZ | interpretação e política por cluster |
 
 ## Arquitetura por responsabilidade acadêmica
 

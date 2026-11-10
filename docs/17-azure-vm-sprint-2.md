@@ -1,6 +1,6 @@
 # Azure VM — implantação da sprint 2
 
-Homologação recriada e validada em **29/10/2026** na assinatura Azure for
+Homologação recriada em **29/10/2026** e revisada em **10/11/2026** na assinatura Azure for
 Students. A VM anterior em Canada Central teve indisponibilidade de capacidade;
 por isso, o projeto foi migrado para uma VM regional em Mexico Central. A VM
 antiga permanece desalocada apenas como recuperação e não hospeda a aplicação.
@@ -34,20 +34,26 @@ administrativo; regras temporárias de implantação são removidas ao fim do
 trabalho. Não há exposição pública de 3000, 3333, 5432 ou 5433. Segredos ficam
 em `/etc/estoque-inteligente`, fora do Git e com acesso restrito.
 
-A identidade gerenciada da VM possui somente `Azure Service Bus Data Sender` e
-`Data Receiver` no namespace. O tópico `inventory-domain-events` usa detecção
-de duplicatas por um dia; a assinatura `inventory-workers` tem dez tentativas,
-TTL de 14 dias e DLQ. O consumidor grava UUIDs em `processed_messages` antes do
-ack. Na validação, duas mensagens foram processadas, o backlog ficou zerado e a
-DLQ vazia. Consulte [Mensageria Azure](19-mensageria-azure.md).
+A validação original usou identidade gerenciada com `Azure Service Bus Data
+Sender` e `Data Receiver` no namespace criado na assinatura acadêmica. Em
+10/11, o publicador da outbox foi direcionado exclusivamente ao namespace
+externo oficial `sb-estoque-inteligente.servicebus.windows.net`, tópico
+`inventory-domain-events`, usando uma credencial de envio guardada fora do Git.
+
+O consumidor permanece conectado à assinatura `inventory-workers` do namespace
+acadêmico anterior. A credencial externa disponível possui envio, mas não
+`Listen`; por isso, publicação externa e consumo na VM ainda não formam um fluxo
+ponta a ponta. É necessário conceder leitura e confirmar uma assinatura no
+namespace externo antes de mover o consumidor. Consulte
+[Mensageria Azure](19-mensageria-azure.md).
 
 ## Dados, ML e automação
 
-As sete migrações foram aplicadas. A carga final preserva 1.067.371 fatos UCI,
-1.003.744 itens aceitos, 4.737 produtos originais e 261.024 linhas simuladas em
-BRL até 29/10/2026. A fonte é verificada por SHA-256 e nenhum identificador de
-cliente é persistido. Os jobs publicam K-Means, Random Forest e previsão de
-demanda com métricas e artefatos versionados.
+As sete migrações foram aplicadas. A carga atual preserva 1.067.371 fatos UCI,
+1.003.744 itens aceitos, 4.737 produtos originais e 261.552 linhas simuladas em
+BRL até 09/11/2026, geradas para 52 produtos ativos. A fonte é verificada por
+SHA-256 e nenhum identificador de cliente é persistido. Os jobs publicam
+K-Means, Random Forest e previsão de demanda com métricas e artefatos versionados.
 
 `estoque-pipeline.timer` executa diariamente por volta de **01:30 no horário de
 São Paulo** (04:30 UTC, com atraso aleatório de até cinco minutos): primeiro
@@ -60,7 +66,8 @@ restauração em outro host continuam necessários para produção.
 
 ## Validação
 
-No código até `02ee802`, foram aprovados na própria VM:
+Na validação histórica de 29/10, no código até `02ee802`, foram aprovados na
+própria VM:
 
 - `npm ci`, build e lint de API e web;
 - 17 testes Node da API e 8 do web;
@@ -69,9 +76,16 @@ No código até `02ee802`, foram aprovados na própria VM:
 - publicação e consumo reais no Azure Service Bus;
 - site, `/health` e `/docs/` com HTTP 200 externo.
 
-O `npm audit` ainda informa 24 ocorrências transitivas (1 baixa, 6 moderadas,
-13 altas e 4 críticas). Não foi aplicado `--force`, pois exigiria mudanças
+Naquela validação, o `npm audit` informou 24 ocorrências transitivas (1 baixa,
+6 moderadas, 13 altas e 4 críticas). Não foi aplicado `--force`, pois exigiria mudanças
 potencialmente incompatíveis; a atualização controlada permanece pendência.
+
+Em 10/11, o commit `35694e8` estava implantado e sincronizado. API, Web, outbox,
+consumer, PostgreSQL, Nginx e timers estavam ativos; site, `/health` e `/docs/`
+responderam HTTP 200. O SMTP real foi verificado com aceite do provedor. A
+publicação externa foi comprovada com um evento real da outbox, publicado na
+primeira tentativa e sem erro. Essa verificação operacional não substitui o
+relatório completo de testes de 29/10.
 
 ## Custo e operação
 
@@ -94,6 +108,6 @@ curl http://127.0.0.1/health
 
 O projeto Vitalis e seus contêineres, imagens, volumes, unidades e arquivos não
 existem nesta nova VM. Ela contém somente os recursos deste projeto. O ambiente
-continua sendo homologação acadêmica em HTTP: domínio, TLS, SMTP real, backup
+continua sendo homologação acadêmica em HTTP: domínio, TLS, backup
 externo fora da VM, monitoramento com alertas e alta disponibilidade ainda são
 requisitos para produção.

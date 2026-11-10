@@ -122,6 +122,9 @@ Aviso não fatal: joblib não detectou núcleos físicos e usou os lógicos.
 
 ## Atualização Azure — 29/10/2026 — passed
 
+Nota: esta seção preserva a validação de 29/10. O estado operacional revisado
+em 10/11 está em 09-atualizacao-vm-2026-11-10.txt.
+
 Base: commits até `02ee802`, antes do commit documental final.
 
 - API unitária: 17 aprovados, 0 falhas;

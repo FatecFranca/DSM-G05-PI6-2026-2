@@ -17,7 +17,7 @@ API TypeScript e mobile/desktop Flutter.
 ## Dados e separação
 
 - Fonte `demo-brl`, gerador `demo-brl-generator-v1`, semente 20260919.
-- 48 produtos fictícios `DEMO-*`; preços BRL definidos diretamente, sem conversão de GBP.
+- 52 produtos fictícios ativos `DEMO-*`; preços BRL definidos diretamente, sem conversão de GBP.
 - Série diária desde o dia posterior ao fim da UCI até hoje, fuso America/Sao_Paulo.
   Variação semanal/anual, tendência, aumento em novembro e demanda intermitente.
 - Registros representam **produto/dia**, não pedidos individuais. `orders_count`
@@ -34,8 +34,9 @@ moedas distintas. Não há seletor de datasets na interface nesta entrega.
 ## Atualizações
 
 Execute `npm run demo:refresh` em outro dia para acrescentar datas e recalcular
-previsões (`data:demo` seguido de `ml:demo`). **Não há agendamento automático.** No mesmo dia
-a carga não insere nada. Não aceita datas futuras nem retrocede o histórico.
+previsões (`data:demo` seguido de `ml:demo`). Localmente não há agendamento
+automático; na VM, `estoque-pipeline.timer` executa a atualização diariamente.
+No mesmo dia a carga não insere nada. Não aceita datas futuras nem retrocede o histórico.
 Um corte pode ser reproduzido com `npm run data:demo -- --through 2026-09-19`.
 
 Carga transacional com advisory lock. Extensões preservam valores anteriores,
@@ -47,15 +48,16 @@ seguem o catálogo sintético fixo, mesmo após edição do preço operacional.
 `ml:demo` usa os últimos 730 dias. Publica K-Means, Random Forest e previsão
 HistGradientBoosting (ou referência sazonal se obtiver menor MAE).
 Horizontes 7/30/90 dias começam após o último dia gerado; não são vendas novas.
-Em 28/10/2026, portanto, começam em 29/10/2026. Se a rotina diária deixar de
-rodar, a API marca a resposta como desatualizada e a interface orienta executar
+Na carga validada até 09/11/2026, portanto, começam em 10/11/2026. Se a rotina
+diária deixar de rodar, a API marca a resposta como desatualizada e a interface orienta executar
 `npm run demo:refresh`; ela não reaproveita uma previsão velha mudando sua data.
 Artefatos e métricas: `models/demo-brl/v2/` (fora do Git). Para apenas avaliar:
 `npm run ml:demo -- --evaluate-only`. Retreinar substitui a execução lógica da versão.
 
-Avaliação em 28/10/2026: WAPE 23,1954%, referência 31,0705%, MAE 3,504596
-unidades/produto/dia; F1 do classificador 0,909091 em 12 produtos; 5 grupos.
-Isso **não comprova precisão em vendas reais**. Validação de 30 dias usada para
+Na atualização de 09/11/2026, a demonstração possui 261.552 registros
+produto/dia e WAPE publicado de 24,2461%. A execução UCI publicada registrou F1
+0,818076, silhouette 0,35838 com 2 grupos e WAPE 1,09163 contra baseline
+1,215351. Isso **não comprova precisão em vendas reais**. A validação usada para
 seleção não é teste independente; bandas do gráfico são heurísticas.
 
 Inteligência mostra tendências por produto, reposição e mudanças projetadas na

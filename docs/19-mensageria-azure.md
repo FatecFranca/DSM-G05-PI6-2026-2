@@ -18,8 +18,8 @@ AZURE_SERVICE_BUS_CONNECTION_STRING=Endpoint=sb://...
 AZURE_SERVICE_BUS_TOPIC=inventory-domain-events
 ```
 
-Em uma VM Azure, a recomendação é substituir a connection string por
-identidade gerenciada e informar apenas o namespace:
+Quando a VM possui acesso IAM ao namespace, a recomendação é substituir a
+connection string por identidade gerenciada e informar apenas o namespace:
 
 ```env
 MESSAGING_MODE=azure-service-bus
@@ -28,10 +28,25 @@ AZURE_SERVICE_BUS_TOPIC=inventory-domain-events
 AZURE_SERVICE_BUS_SUBSCRIPTION=inventory-workers
 ```
 
-Atribua à identidade da aplicação as permissões **Azure Service Bus Data
-Sender** e **Azure Service Bus Data Receiver** no namespace.
-A connection string fica restrita ao ambiente local de desenvolvimento e nunca
-deve ser versionada.
+Atribua ao publicador **Azure Service Bus Data Sender** e ao consumidor **Azure
+Service Bus Data Receiver**, mantendo privilégios separados. Connection strings
+nunca devem ser versionadas e, quando necessárias, ficam em arquivos protegidos
+fora do repositório.
+
+## Estado implantado em 10/11/2026
+
+Todos os novos eventos da outbox são publicados no namespace externo oficial
+`sb-estoque-inteligente.servicebus.windows.net`, no tópico
+`inventory-domain-events`. O serviço `estoque-outbox` recebe a configuração de
+envio por um arquivo protegido específico; nenhuma chave consta no Git ou nesta
+documentação.
+
+O serviço `estoque-consumer` ainda usa o namespace acadêmico anterior. A
+credencial externa fornecida permite envio, mas não leitura. Para consumir o
+fluxo oficial, é necessário fornecer uma credencial separada com `Listen` ou
+conceder `Azure Service Bus Data Receiver` à identidade da VM e confirmar o nome
+da assinatura, esperado como `inventory-workers`. Uma assinatura criada depois
+da publicação não recupera mensagens antigas do tópico.
 
 ## Infraestrutura reproduzível
 
@@ -70,9 +85,14 @@ npm run messaging:dlq -- --limit 20
 npm run messaging:dlq -- --limit 20 --execute
 ```
 
-Na homologação de 29/10/2026, publisher e consumer ficaram ativos via systemd,
+Na homologação de 29/10/2026, publisher e consumer ficaram ativos via systemd
+no namespace acadêmico,
 2 mensagens foram processadas e registradas, e a assinatura terminou com
-backlog 0 e DLQ 0.
+backlog 0 e DLQ 0. Esse registro permanece como evidência histórica.
+
+Em 10/11/2026, um evento real da outbox foi publicado no namespace externo na
+primeira tentativa, sem erro. O consumo externo não foi declarado como aprovado
+porque ainda falta permissão `Listen` nesse namespace.
 
 Eventos publicados pelo estoque:
 
@@ -88,7 +108,8 @@ Eventos publicados pelo estoque:
   de duplicatas;
 - restringir a rede pública quando a VM e os consumidores estiverem em uma
   VNet privada;
-- usar identidade gerenciada na VM, com menor privilégio;
+- preferir identidade gerenciada; quando houver SAS, separar políticas de envio
+  e leitura, armazená-las fora do Git e rotacioná-las quando expostas;
 - criar alertas de backlog, mensagens na DLQ, falhas de publicação e custo;
 - aplicar TTL e retenção compatíveis com a política do projeto.
 

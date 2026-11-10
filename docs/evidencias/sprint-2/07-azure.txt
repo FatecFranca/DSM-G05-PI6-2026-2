@@ -1,5 +1,8 @@
 EVIDÊNCIA SANITIZADA — AZURE — 29/10/2026
 
+NOTA: este arquivo preserva o snapshot de 29/10. O estado operacional revisado
+em 10/11 está em 09-atualizacao-vm-2026-11-10.txt.
+
 Assinatura: Azure for Students
 Grupo de recursos: PI5
 VM: servidor_pi_vi

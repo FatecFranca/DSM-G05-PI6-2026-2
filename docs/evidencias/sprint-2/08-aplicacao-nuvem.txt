@@ -1,5 +1,8 @@
 EVIDÊNCIA SANITIZADA — APLICAÇÃO NA NUVEM — 29/10/2026
 
+NOTA: este arquivo preserva o snapshot de 29/10. O estado operacional revisado
+em 10/11 está em 09-atualizacao-vm-2026-11-10.txt.
+
 VM: servidor_pi_vi, Mexico Central
 Base implantada: commits até 02ee802, mais o commit documental desta validação.
 

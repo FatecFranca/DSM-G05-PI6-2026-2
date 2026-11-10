@@ -1,0 +1,48 @@
+EVIDÊNCIA SANITIZADA — ATUALIZAÇÃO DA VM — 10/11/2026
+
+Escopo:
+- VM servidor_pi_vi, Mexico Central;
+- repositório implantado no commit 35694e8;
+- revisão operacional posterior à evidência de 29/10;
+- nenhum segredo, token, senha ou connection string consta neste arquivo.
+
+Aplicação e serviços:
+- API, Web, Nginx, PostgreSQL, outbox, consumer e timers ativos;
+- PM2 instalado, sem processos do projeto; execução permanece via systemd;
+- aplicação, /health e /docs/ responderam HTTP 200;
+- sete migrações aplicadas;
+- SMTP real verificado e mensagem de teste aceita pelo provedor.
+
+Dados atuais:
+- fatos UCI: 1.067.371;
+- itens de pedidos aceitos: 1.003.744;
+- produtos UCI: 4.737;
+- produtos totais no banco: 4.789;
+- demonstração BRL: 261.552 registros até 09/11/2026, 52 produtos ativos;
+- pedidos: 39.566; itens de pedidos: 1.003.744;
+- demanda diária: 791.826; previsões publicadas: 608.203;
+- execuções de modelos: 8.
+
+Modelos publicados:
+- UCI clustering: silhouette 0,35838, 2 clusters;
+- UCI classificação: F1 0,818076;
+- UCI previsão: WAPE 1,09163, baseline 1,215351;
+- demonstração BRL: WAPE 0,242461.
+
+Mensageria:
+- todas as novas publicações da outbox seguem para o namespace externo oficial
+  sb-estoque-inteligente.servicebus.windows.net;
+- tópico: inventory-domain-events;
+- evento real da outbox publicado na primeira tentativa, sem erro;
+- product.created, product.updated, stock.entry, stock.exit, stock.adjustment e
+  stock.transferred usam a mesma outbox e o mesmo roteamento externo;
+- o consumer da VM ainda usa a assinatura do namespace acadêmico anterior;
+- falta permissão Listen e uma assinatura confirmada no namespace externo para
+  validar o consumo ponta a ponta oficial.
+
+Limitações declaradas:
+- homologação acessível por HTTP, sem domínio ou TLS;
+- backup externo, restauração em outro host, alertas e alta disponibilidade
+  continuam pendentes para produção;
+- esta verificação operacional não substitui o relatório completo de testes de
+  29/10/2026.
